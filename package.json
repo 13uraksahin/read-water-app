@@ -5,6 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
+    "dev:tunnel": "NUXT_PUBLIC_USE_TUNNEL=true NUXT_PUBLIC_API_BASE=https://read-water-api.portall.com.tr NUXT_PUBLIC_SOCKET_URL=https://read-water-api.portall.com.tr nuxt dev --host",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"

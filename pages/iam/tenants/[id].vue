@@ -311,8 +311,8 @@ const handleEditSuccess = () => {
             
             <div class="flex items-center justify-between">
               <span class="text-muted-foreground">Active</span>
-              <UiBadge :variant="tenant.isActive ? 'success' : 'secondary'">
-                {{ tenant.isActive ? 'Yes' : 'No' }}
+              <UiBadge :variant="tenant.isActive !== false ? 'success' : 'secondary'">
+                {{ tenant.isActive !== false ? 'Yes' : 'No' }}
               </UiBadge>
             </div>
           </UiCardContent>

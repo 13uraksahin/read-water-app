@@ -212,33 +212,31 @@ onMounted(() => {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <UiLabel>Status</UiLabel>
-            <UiSelect v-model="filterStatus">
-              <UiSelectTrigger>
-                <UiSelectValue placeholder="All statuses" />
-              </UiSelectTrigger>
-              <UiSelectContent>
-                <UiSelectItem value="">All statuses</UiSelectItem>
-                <UiSelectItem value="ACTIVE">Active</UiSelectItem>
-                <UiSelectItem value="ACKNOWLEDGED">Acknowledged</UiSelectItem>
-                <UiSelectItem value="RESOLVED">Resolved</UiSelectItem>
-              </UiSelectContent>
-            </UiSelect>
+            <UiSelect
+              v-model="filterStatus"
+              :options="[
+                { label: 'All statuses', value: '' },
+                { label: 'Active', value: 'ACTIVE' },
+                { label: 'Acknowledged', value: 'ACKNOWLEDGED' },
+                { label: 'Resolved', value: 'RESOLVED' },
+              ]"
+              placeholder="All statuses"
+            />
           </div>
           <div>
             <UiLabel>Alarm Type</UiLabel>
-            <UiSelect v-model="filterType">
-              <UiSelectTrigger>
-                <UiSelectValue placeholder="All types" />
-              </UiSelectTrigger>
-              <UiSelectContent>
-                <UiSelectItem value="">All types</UiSelectItem>
-                <UiSelectItem value="TAMPER">Tamper</UiSelectItem>
-                <UiSelectItem value="LOW_BATTERY">Low Battery</UiSelectItem>
-                <UiSelectItem value="REVERSE_FLOW">Reverse Flow</UiSelectItem>
-                <UiSelectItem value="NO_SIGNAL">No Signal</UiSelectItem>
-                <UiSelectItem value="TILT">Tilt</UiSelectItem>
-              </UiSelectContent>
-            </UiSelect>
+            <UiSelect
+              v-model="filterType"
+              :options="[
+                { label: 'All types', value: '' },
+                { label: 'Tamper', value: 'TAMPER' },
+                { label: 'Low Battery', value: 'LOW_BATTERY' },
+                { label: 'Reverse Flow', value: 'REVERSE_FLOW' },
+                { label: 'No Signal', value: 'NO_SIGNAL' },
+                { label: 'Tilt', value: 'TILT' },
+              ]"
+              placeholder="All types"
+            />
           </div>
           <div class="flex items-end gap-2">
             <UiButton @click="filterStatus = ''; filterType = ''">Clear Filters</UiButton>
@@ -285,7 +283,7 @@ onMounted(() => {
             <UiTableRow
               v-for="alarm in filteredAlarms"
               :key="alarm.id"
-              :class="{ 'bg-muted/30': alarm.status !== 'ACTIVE' }"
+              :class="alarm.status !== 'ACTIVE' ? 'bg-muted/30' : ''"
             >
               <UiTableCell>
                 <div :class="['p-2 rounded-lg w-fit', severityColors[getSeverityLabel(alarm.severity)]]">

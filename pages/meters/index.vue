@@ -33,7 +33,7 @@ const statusOptions = [
   { label: 'Warehouse', value: 'WAREHOUSE' },
   { label: 'Maintenance', value: 'MAINTENANCE' },
   { label: 'Planned', value: 'PLANNED' },
-  { label: 'Deployed (Not Started)', value: 'DEPLOYED_NOT_STARTED' },
+  { label: 'Deployed', value: 'DEPLOYED' },
 ]
 
 // Fetch meters
@@ -79,7 +79,7 @@ const getStatusVariant = (status: MeterStatus) => {
     WAREHOUSE: 'info',
     MAINTENANCE: 'warning',
     PLANNED: 'secondary',
-    DEPLOYED_NOT_STARTED: 'info',
+    DEPLOYED: 'info',
   }
   return variants[status] || 'secondary'
 }
@@ -181,8 +181,8 @@ const goToMeter = (id: string) => {
                 {{ meter.customer?.details?.firstName || meter.customer?.details?.organizationName || 'N/A' }}
               </UiTableCell>
               <UiTableCell>
-                <span v-if="meter.profile">
-                  {{ meter.profile.brand }} {{ meter.profile.modelCode }}
+                <span v-if="meter.meterProfile">
+                  {{ meter.meterProfile.brand }} {{ meter.meterProfile.modelCode }}
                 </span>
                 <span v-else class="text-muted-foreground">N/A</span>
               </UiTableCell>
@@ -192,17 +192,17 @@ const goToMeter = (id: string) => {
                 </UiBadge>
               </UiTableCell>
               <UiTableCell class="font-mono">
-                {{ meter.currentIndex.toLocaleString() }} m³
+                {{ Number(meter.lastReadingValue ?? meter.initialIndex ?? 0).toLocaleString() }} m³
               </UiTableCell>
               <UiTableCell>
-                <span v-if="meter.lastReading" class="text-sm">
-                  {{ formatDate(meter.lastReading.time) }}
+                <span v-if="meter.lastReadingTime" class="text-sm">
+                  {{ formatDate(meter.lastReadingTime) }}
                 </span>
                 <span v-else class="text-muted-foreground">Never</span>
               </UiTableCell>
               <UiTableCell>
-                <span v-if="meter.latitude && meter.longitude" class="text-xs font-mono">
-                  {{ meter.latitude.toFixed(4) }}, {{ meter.longitude.toFixed(4) }}
+                <span v-if="meter.latitude != null && meter.longitude != null" class="text-xs font-mono">
+                  {{ Number(meter.latitude).toFixed(4) }}, {{ Number(meter.longitude).toFixed(4) }}
                 </span>
                 <span v-else class="text-muted-foreground">-</span>
               </UiTableCell>

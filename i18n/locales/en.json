@@ -10,6 +10,7 @@
     "liveReadings": "Live Readings",
     "customers": "Customers",
     "meters": "Meters",
+    "devices": "Device Inventory",
     "profiles": "Profiles",
     "decoders": "Decoder Functions",
     "iam": "IAM",
@@ -143,11 +144,46 @@
     }
   },
   "profiles": {
-    "title": "Meter Profiles",
-    "description": "Manage meter models and communication configurations",
+    "title": "Profiles",
+    "description": "Manage meter and device profiles",
+    "meterProfiles": "Meter Profiles",
+    "meterProfilesDescription": "Mechanical water meter specifications",
+    "deviceProfiles": "Device Profiles",
+    "deviceProfilesDescription": "Communication device configurations and decoders",
     "addProfile": "Add Profile",
+    "addMeterProfile": "Add Meter Profile",
+    "addDeviceProfile": "Add Device Profile",
     "noProfiles": "No profiles found",
-    "noProfilesHint": "Add a new meter profile to get started"
+    "noProfilesHint": "Add a new profile to get started"
+  },
+  "devices": {
+    "title": "Device Inventory",
+    "description": "Manage communication devices and modules",
+    "addDevice": "Add Device",
+    "noDevices": "No devices found",
+    "noDevicesHint": "Add a new device to your inventory",
+    "createTitle": "Add New Device",
+    "createDescription": "Add a communication device to your inventory",
+    "inWarehouse": "In Warehouse",
+    "deployed": "Deployed",
+    "inMaintenance": "In Maintenance",
+    "linkDevice": "Link Device",
+    "unlinkDevice": "Unlink Device",
+    "selectFromInventory": "Select from Inventory",
+    "createNew": "Create New Device",
+    "noDeviceLinked": "No Device Linked",
+    "mechanicalOnly": "Mechanical Only",
+    "columns": {
+      "serial": "Serial",
+      "identifier": "Identifier",
+      "brand": "Brand",
+      "model": "Model",
+      "technology": "Technology",
+      "status": "Status",
+      "linkedMeter": "Linked Meter",
+      "battery": "Battery",
+      "lastComm": "Last Communication"
+    }
   },
   "tenants": {
     "title": "Tenants",
@@ -252,4 +288,3 @@
     "selectTenant": "Select"
   }
 }
-

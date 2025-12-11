@@ -103,7 +103,10 @@ const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructiv
 
 // Calculate total consumption
 const totalConsumption = computed(() => {
-  return meters.value.reduce((sum, meter) => sum + (meter.currentIndex - meter.initialIndex), 0)
+  return meters.value.reduce((sum, meter) => {
+    const currentValue = meter.lastReadingValue ?? meter.initialIndex ?? 0
+    return sum + (currentValue - (meter.initialIndex ?? 0))
+  }, 0)
 })
 
 // Initial fetch
@@ -151,8 +154,8 @@ const handleEditSuccess = () => {
         </template>
       </div>
       
-      <UiBadge v-if="customer" :variant="customer.isActive ? 'success' : 'secondary'" class="mr-2">
-        {{ customer.isActive ? 'Active' : 'Inactive' }}
+      <UiBadge v-if="customer" :variant="customer.isActive !== false ? 'success' : 'secondary'" class="mr-2">
+        {{ customer.isActive !== false ? 'Active' : 'Inactive' }}
       </UiBadge>
       
       <UiButton v-if="customer" @click="showEditDialog = true">
@@ -407,7 +410,7 @@ const handleEditSuccess = () => {
                   </div>
                 </UiTableCell>
                 <UiTableCell>
-                  {{ meter.profile?.brand }} {{ meter.profile?.modelCode }}
+                  {{ meter.meterProfile?.brand }} {{ meter.meterProfile?.modelCode }}
                 </UiTableCell>
                 <UiTableCell>
                   <UiBadge :variant="getStatusVariant(meter.status)">
@@ -415,10 +418,10 @@ const handleEditSuccess = () => {
                   </UiBadge>
                 </UiTableCell>
                 <UiTableCell>
-                  {{ meter.currentIndex.toFixed(3) }} m³
+                  {{ (meter.lastReadingValue ?? meter.initialIndex ?? 0).toFixed(3) }} m³
                 </UiTableCell>
                 <UiTableCell>
-                  {{ (meter.currentIndex - meter.initialIndex).toFixed(3) }} m³
+                  {{ ((meter.lastReadingValue ?? meter.initialIndex ?? 0) - (meter.initialIndex ?? 0)).toFixed(3) }} m³
                 </UiTableCell>
               </UiTableRow>
             </template>

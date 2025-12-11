@@ -41,7 +41,6 @@ export default defineNuxtConfig({
       { code: 'fr', name: 'Français', file: 'fr.json' },
     ],
     defaultLocale: 'en',
-    lazy: true,
     langDir: 'locales',
     strategy: 'no_prefix',
     detectBrowserLanguage: {
@@ -69,11 +68,16 @@ export default defineNuxtConfig({
     fallback: 'dark',
   },
 
-  // Runtime configuration
+  // Runtime configuration (uses NUXT_ prefixed env vars automatically)
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:4000',
-      socketUrl: process.env.NUXT_PUBLIC_SOCKET_URL || 'http://localhost:4000',
+      apiBase: 'http://localhost:4000',
+      socketUrl: 'http://localhost:4000',
+      // Cloudflare tunnel URLs (for production/testing)
+      tunnelApiUrl: 'https://read-water-api.portall.com.tr',
+      tunnelAppUrl: 'https://read-water-app.portall.com.tr',
+      // Flag to determine if running through tunnel
+      useTunnel: false,
     },
   },
 
@@ -83,6 +87,7 @@ export default defineNuxtConfig({
       '/api': {
         target: 'http://localhost:4000',
         changeOrigin: true,
+        secure: true,
       },
     },
   },
@@ -106,5 +111,28 @@ export default defineNuxtConfig({
     optimizeDeps: {
       include: ['apexcharts', 'vue3-apexcharts'],
     },
+    server: {
+      allowedHosts: [
+        'read-water-app.portall.com.tr',
+        'read-water-api.portall.com.tr',
+        'localhost',
+        '.portall.com.tr', // Allow all subdomains
+      ],
+      // HMR Configuration: Auto-detect based on page URL
+      // This allows BOTH localhost and tunnel access to work simultaneously:
+      // - localhost:3000 -> ws://localhost:3000/_nuxt/
+      // - tunnel.com:443 -> wss://tunnel.com:443/_nuxt/
+      hmr: {
+        // Don't set protocol - auto-detect from page (http->ws, https->wss)
+        // Don't set host - auto-detect from page hostname
+        // Don't set clientPort - auto-detect from page port (defaults to protocol default)
+        overlay: true,
+      },
+    },
+  },
+
+  // Dev server configuration
+  devServer: {
+    host: '0.0.0.0', // Listen on all network interfaces
   },
 })

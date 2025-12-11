@@ -6,10 +6,8 @@ import {
   Ruler,
   Droplets,
   Wifi,
-  Battery,
+  Radio,
   Shield,
-  Code,
-  Copy,
 } from 'lucide-vue-next'
 import type { MeterProfile } from '~/types'
 
@@ -49,16 +47,6 @@ const formatFlowRate = (value?: number): string => {
   return `${value} m³/h`
 }
 
-// Copy decoder to clipboard
-const copyDecoder = async (decoder: string) => {
-  try {
-    await navigator.clipboard.writeText(decoder)
-    toast.success('Decoder copied to clipboard')
-  } catch {
-    toast.error('Failed to copy decoder')
-  }
-}
-
 // Initial fetch
 onMounted(() => {
   fetchProfile()
@@ -90,13 +78,9 @@ const handleEditSuccess = () => {
             <FileText class="h-6 w-6 text-primary" />
             {{ profile.brand }} {{ profile.modelCode }}
           </h1>
-          <p class="text-sm text-muted-foreground">{{ profile.meterType?.replace(/_/g, ' ') }}</p>
+          <p class="text-sm text-muted-foreground">{{ profile.meterType?.replace(/_/g, ' ') }} • Meter Profile</p>
         </template>
       </div>
-      
-      <UiBadge v-if="profile" :variant="profile.isActive ? 'success' : 'secondary'" class="mr-2">
-        {{ profile.isActive ? 'Active' : 'Inactive' }}
-      </UiBadge>
       
       <UiButton v-if="profile" @click="showEditDialog = true">
         <Edit class="h-4 w-4" />
@@ -128,7 +112,7 @@ const handleEditSuccess = () => {
         <UiCard class="lg:col-span-2">
           <UiCardHeader>
             <UiCardTitle>Technical Specifications</UiCardTitle>
-            <UiCardDescription>Meter characteristics and properties</UiCardDescription>
+            <UiCardDescription>Mechanical meter characteristics and properties</UiCardDescription>
           </UiCardHeader>
           <UiCardContent>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
@@ -171,45 +155,54 @@ const handleEditSuccess = () => {
                 <p class="text-sm text-muted-foreground">IP Rating</p>
                 <UiBadge variant="outline">{{ profile.ipRating }}</UiBadge>
               </div>
+              
+              <div>
+                <p class="text-sm text-muted-foreground">Communication Module</p>
+                <UiBadge variant="secondary">
+                  {{ profile.communicationModule?.replace(/_/g, ' ') }}
+                </UiBadge>
+              </div>
             </div>
           </UiCardContent>
         </UiCard>
         
-        <!-- Communication Info -->
+        <!-- Compatible Device Profiles -->
         <UiCard>
           <UiCardHeader>
             <UiCardTitle class="flex items-center gap-2">
-              <Wifi class="h-4 w-4" />
-              Communication
+              <Radio class="h-4 w-4" />
+              Compatible Devices
             </UiCardTitle>
+            <UiCardDescription>
+              Device profiles that can be linked to meters using this profile
+            </UiCardDescription>
           </UiCardHeader>
-          <UiCardContent class="space-y-4">
-            <div class="flex items-center justify-between">
-              <span class="text-muted-foreground">Module</span>
-              <UiBadge variant="secondary">
-                {{ profile.communicationModule?.replace(/_/g, ' ') }}
-              </UiBadge>
-            </div>
-            
-            <div v-if="profile.batteryLife" class="flex items-center justify-between">
-              <span class="text-muted-foreground flex items-center gap-1">
-                <Battery class="h-4 w-4" />
-                Battery Life
-              </span>
-              <span class="font-medium">{{ profile.batteryLife }} months</span>
-            </div>
-            
-            <div v-if="profile.communicationConfig?.length" class="pt-4 border-t border-border">
-              <p class="text-sm text-muted-foreground mb-2">Supported Technologies</p>
-              <div class="flex flex-wrap gap-2">
-                <UiBadge
-                  v-for="config in profile.communicationConfig"
-                  :key="config.technology"
-                  variant="outline"
-                >
-                  {{ config.technology.replace(/_/g, ' ') }}
-                </UiBadge>
+          <UiCardContent>
+            <div v-if="profile.compatibleDeviceProfiles?.length" class="space-y-3">
+              <div
+                v-for="dp in profile.compatibleDeviceProfiles"
+                :key="dp.id"
+                class="p-3 rounded-lg border border-border hover:border-primary/50 cursor-pointer transition-colors"
+                @click="navigateTo(`/profiles/device/${dp.id}`)"
+              >
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="font-medium">{{ dp.brand }} {{ dp.modelCode }}</p>
+                    <p class="text-xs text-muted-foreground">
+                      {{ dp.communicationTechnology?.replace(/_/g, '-') }}
+                    </p>
+                  </div>
+                  <UiBadge variant="outline" class="text-xs">
+                    {{ dp.integrationType }}
+                  </UiBadge>
+                </div>
               </div>
+            </div>
+            
+            <div v-else class="text-center py-6 text-muted-foreground">
+              <Radio class="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p class="text-sm">No compatible device profiles</p>
+              <p class="text-xs">Edit this profile to add compatible devices</p>
             </div>
           </UiCardContent>
         </UiCard>
@@ -286,39 +279,8 @@ const handleEditSuccess = () => {
         </UiCard>
       </div>
       
-      <!-- Decoder Functions -->
-      <UiCard v-if="profile.communicationConfig?.some(c => c.decoderFunction)">
-        <UiCardHeader>
-          <UiCardTitle class="flex items-center gap-2">
-            <Code class="h-4 w-4" />
-            Decoder Functions
-          </UiCardTitle>
-          <UiCardDescription>JavaScript functions to decode payloads for each technology</UiCardDescription>
-        </UiCardHeader>
-        <UiCardContent class="space-y-4">
-          <div
-            v-for="config in profile.communicationConfig?.filter(c => c.decoderFunction)"
-            :key="config.technology"
-            class="rounded-lg border border-border overflow-hidden"
-          >
-            <div class="flex items-center justify-between px-4 py-2 bg-muted/50 border-b border-border">
-              <UiBadge variant="outline">{{ config.technology }}</UiBadge>
-              <UiButton
-                variant="ghost"
-                size="sm"
-                @click="copyDecoder(config.decoderFunction!)"
-              >
-                <Copy class="h-4 w-4" />
-                Copy
-              </UiButton>
-            </div>
-            <pre class="p-4 text-sm font-mono overflow-x-auto bg-muted/20">{{ config.decoderFunction }}</pre>
-          </div>
-        </UiCardContent>
-      </UiCard>
-      
       <!-- Assigned Tenants -->
-      <UiCard v-if="profile.tenants?.length">
+      <UiCard v-if="profile.allowedTenants?.length">
         <UiCardHeader>
           <UiCardTitle>Assigned Tenants</UiCardTitle>
           <UiCardDescription>Tenants that can use this meter profile</UiCardDescription>
@@ -326,7 +288,7 @@ const handleEditSuccess = () => {
         <UiCardContent>
           <div class="flex flex-wrap gap-2">
             <UiBadge
-              v-for="tenant in profile.tenants"
+              v-for="tenant in profile.allowedTenants"
               :key="tenant.id"
               variant="secondary"
               class="cursor-pointer hover:bg-secondary/80"

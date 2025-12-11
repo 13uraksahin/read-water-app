@@ -58,11 +58,14 @@ const tenantTree = computed(() => {
   return roots
 })
 
+// Extended tenant type with tree properties
+type TenantTreeNode = Tenant & { children: TenantTreeNode[]; level: number }
+
 // Flatten tree for display
-const flattenTree = (nodes: (Tenant & { children: Tenant[]; level: number })[]): (Tenant & { children: Tenant[]; level: number })[] => {
-  const result: (Tenant & { children: Tenant[]; level: number })[] = []
+const flattenTree = (nodes: TenantTreeNode[]): TenantTreeNode[] => {
+  const result: TenantTreeNode[] = []
   
-  const traverse = (items: (Tenant & { children: Tenant[]; level: number })[]) => {
+  const traverse = (items: TenantTreeNode[]) => {
     items.forEach(item => {
       result.push(item)
       if (expandedIds.value.has(item.id) && item.children.length > 0) {
@@ -75,7 +78,7 @@ const flattenTree = (nodes: (Tenant & { children: Tenant[]; level: number })[]):
   return result
 }
 
-const flatTenants = computed(() => flattenTree(tenantTree.value))
+const flatTenants = computed(() => flattenTree(tenantTree.value as TenantTreeNode[]))
 
 // Toggle expand
 const toggleExpand = (id: string) => {

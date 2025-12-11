@@ -32,9 +32,9 @@ onMounted(() => {
 })
 
 // Navigate to profile to edit decoder
-const goToProfile = (profileId: string | undefined) => {
-  if (profileId) {
-    navigateTo(`/profiles/${profileId}`)
+const goToProfile = (decoder: DecoderFunction) => {
+  if (decoder.deviceProfileId) {
+    navigateTo(`/profiles/devices/${decoder.deviceProfileId}`)
   }
 }
 </script>
@@ -83,7 +83,7 @@ const goToProfile = (profileId: string | undefined) => {
         v-for="decoder in decoders"
         :key="decoder.id"
         hover
-        @click="goToProfile(decoder.profileId)"
+        @click="goToProfile(decoder)"
       >
         <UiCardHeader>
           <div class="flex items-start justify-between">
@@ -94,8 +94,8 @@ const goToProfile = (profileId: string | undefined) => {
               </UiCardTitle>
               <UiCardDescription>{{ decoder.technology }}</UiCardDescription>
             </div>
-            <UiBadge :variant="decoder.isActive ? 'success' : 'secondary'">
-              {{ decoder.isActive ? 'Active' : 'Inactive' }}
+            <UiBadge :variant="decoder.lastTestSucceeded ? 'success' : 'secondary'">
+              {{ decoder.lastTestSucceeded ? 'Tested' : 'Untested' }}
             </UiBadge>
           </div>
         </UiCardHeader>
@@ -106,13 +106,13 @@ const goToProfile = (profileId: string | undefined) => {
           
           <!-- Code preview -->
           <div class="bg-muted/50 rounded-lg p-3 overflow-hidden">
-            <pre class="text-xs font-mono text-muted-foreground overflow-x-auto max-h-24">{{ decoder.functionCode?.slice(0, 200) }}{{ decoder.functionCode?.length > 200 ? '...' : '' }}</pre>
+            <pre class="text-xs font-mono text-muted-foreground overflow-x-auto max-h-24">{{ decoder.functionCode?.slice(0, 200) }}{{ (decoder.functionCode?.length ?? 0) > 200 ? '...' : '' }}</pre>
           </div>
           
           <!-- Profile link -->
-          <div v-if="decoder.profile" class="mt-4 pt-4 border-t border-border">
+          <div v-if="decoder.deviceProfile" class="mt-4 pt-4 border-t border-border">
             <p class="text-xs text-muted-foreground">
-              Profile: <span class="text-foreground">{{ decoder.profile.brand }} {{ decoder.profile.modelCode }}</span>
+              Profile: <span class="text-foreground">{{ decoder.deviceProfile.brand }} {{ decoder.deviceProfile.modelCode }}</span>
             </p>
           </div>
         </UiCardContent>

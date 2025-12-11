@@ -10,6 +10,7 @@
     "liveReadings": "Lectures en Direct",
     "customers": "Clients",
     "meters": "Compteurs",
+    "devices": "Inventaire des Appareils",
     "profiles": "Profils",
     "decoders": "Fonctions de Décodage",
     "iam": "Gestion des Identités",
@@ -143,11 +144,46 @@
     }
   },
   "profiles": {
-    "title": "Profils de Compteur",
-    "description": "Gérer les modèles et configurations de communication",
+    "title": "Profils",
+    "description": "Gérer les profils de compteurs et d'appareils",
+    "meterProfiles": "Profils de Compteur",
+    "meterProfilesDescription": "Spécifications des compteurs mécaniques",
+    "deviceProfiles": "Profils d'Appareil",
+    "deviceProfilesDescription": "Configurations et décodeurs d'appareils de communication",
     "addProfile": "Ajouter Profil",
+    "addMeterProfile": "Ajouter Profil de Compteur",
+    "addDeviceProfile": "Ajouter Profil d'Appareil",
     "noProfiles": "Aucun profil trouvé",
-    "noProfilesHint": "Ajoutez un nouveau profil de compteur pour commencer"
+    "noProfilesHint": "Ajoutez un nouveau profil pour commencer"
+  },
+  "devices": {
+    "title": "Inventaire des Appareils",
+    "description": "Gérer les appareils et modules de communication",
+    "addDevice": "Ajouter Appareil",
+    "noDevices": "Aucun appareil trouvé",
+    "noDevicesHint": "Ajoutez un nouvel appareil à votre inventaire",
+    "createTitle": "Ajouter un Nouvel Appareil",
+    "createDescription": "Ajouter un appareil de communication à votre inventaire",
+    "inWarehouse": "En Stock",
+    "deployed": "Déployé",
+    "inMaintenance": "En Maintenance",
+    "linkDevice": "Lier Appareil",
+    "unlinkDevice": "Délier Appareil",
+    "selectFromInventory": "Sélectionner depuis l'Inventaire",
+    "createNew": "Créer Nouvel Appareil",
+    "noDeviceLinked": "Aucun Appareil Lié",
+    "mechanicalOnly": "Mécanique Seulement",
+    "columns": {
+      "serial": "N° Série",
+      "identifier": "Identifiant",
+      "brand": "Marque",
+      "model": "Modèle",
+      "technology": "Technologie",
+      "status": "Statut",
+      "linkedMeter": "Compteur Lié",
+      "battery": "Batterie",
+      "lastComm": "Dernière Communication"
+    }
   },
   "tenants": {
     "title": "Locataires",
@@ -252,4 +288,3 @@
     "selectTenant": "Sélectionner"
   }
 }
-

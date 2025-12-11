@@ -1,6 +1,8 @@
 // =============================================================================
 // TypeScript Type Definitions - Read Water Frontend
 // =============================================================================
+// Refactored for Asset/Device Split Architecture
+// =============================================================================
 
 // =============================================================================
 // Enums (matching backend)
@@ -21,13 +23,23 @@ export enum MeterStatus {
   WAREHOUSE = 'WAREHOUSE',
   MAINTENANCE = 'MAINTENANCE',
   PLANNED = 'PLANNED',
-  DEPLOYED_NOT_STARTED = 'DEPLOYED_NOT_STARTED',
+  DEPLOYED = 'DEPLOYED',
+}
+
+export enum DeviceStatus {
+  ACTIVE = 'ACTIVE',
+  PASSIVE = 'PASSIVE',
+  WAREHOUSE = 'WAREHOUSE',
+  MAINTENANCE = 'MAINTENANCE',
+  PLANNED = 'PLANNED',
+  DEPLOYED = 'DEPLOYED',
 }
 
 export enum ValveStatus {
   OPEN = 'OPEN',
   CLOSED = 'CLOSED',
   UNKNOWN = 'UNKNOWN',
+  NOT_APPLICABLE = 'NOT_APPLICABLE',
 }
 
 export enum CustomerType {
@@ -52,12 +64,19 @@ export enum CommunicationTechnology {
   OMS = 'OMS',
 }
 
+export enum IntegrationType {
+  HTTP = 'HTTP',
+  MQTT = 'MQTT',
+  API = 'API',
+}
+
 export enum CommunicationModule {
   INTEGRATED = 'INTEGRATED',
   RETROFIT = 'RETROFIT',
   NONE = 'NONE',
 }
 
+// Meter Brands (for meters/assets)
 export enum Brand {
   BAYLAN = 'BAYLAN',
   MANAS = 'MANAS',
@@ -69,10 +88,18 @@ export enum Brand {
   TEKSAN = 'TEKSAN',
 }
 
+// Device Brands (for communication devices)
+export enum DeviceBrand {
+  UNA = 'UNA',
+  IMA = 'IMA',
+  ITRON = 'ITRON',
+  ZENNER = 'ZENNER',
+}
+
 export enum MeterType {
   SINGLE_JET = 'SINGLE_JET',
   MULTI_JET = 'MULTI_JET',
-  WOLTMAN_PARALLEL = 'WOLTMAN_PARALLEL',
+  WOLTMAN_PARALEL = 'WOLTMAN_PARALEL',
   WOLTMAN_VERTICAL = 'WOLTMAN_VERTICAL',
   VOLUMETRIC = 'VOLUMETRIC',
   ULTRASONIC = 'ULTRASONIC',
@@ -100,8 +127,8 @@ export enum IPRating {
 // =============================================================================
 
 export interface Address {
-  city: string
-  district: string
+  city?: string
+  district?: string
   neighborhood?: string
   street?: string
   buildingNo?: string
@@ -118,10 +145,10 @@ export interface User {
   lastName: string
   phone?: string
   tcIdNo?: string
-  isActive: boolean
+  isActive?: boolean
   createdAt: string
   updatedAt: string
-  tenants: TenantAssignment[]
+  tenants?: TenantAssignment[]
 }
 
 export interface TenantAssignment {
@@ -148,7 +175,7 @@ export interface Tenant {
   address?: Address
   subscriptionStatus: string
   subscriptionPlan?: string
-  isActive: boolean
+  isActive?: boolean
   createdAt: string
   updatedAt: string
   children?: Tenant[]
@@ -164,7 +191,7 @@ export interface Customer {
   longitude?: number
   addressCode?: string
   address?: Address
-  isActive: boolean
+  isActive?: boolean
   createdAt: string
   updatedAt: string
   meters?: Meter[]
@@ -187,42 +214,78 @@ export interface CustomerDetails {
   contactEmail?: string
 }
 
-export interface Meter {
+// =============================================================================
+// NEW: Device Profile (Electronic Communication Unit Specs)
+// =============================================================================
+
+export interface DeviceFieldDefinition {
+  name: string
+  label?: string
+  type: 'hex' | 'string' | 'number'
+  length?: number
+  regex?: string
+  required: boolean
+  description?: string
+}
+
+// Communication config for each technology in a device profile
+export interface DeviceCommunicationConfig {
+  technology: CommunicationTechnology
+  fieldDefinitions: DeviceFieldDefinition[]
+  decoderFunction?: string
+  testPayload?: string
+}
+
+export interface DeviceProfile {
   id: string
-  tenantId: string
-  customerId?: string
-  profileId: string
-  serialNumber: string
-  deviceId?: string
-  initialIndex: number
-  currentIndex: number
-  status: MeterStatus
-  valveStatus: ValveStatus
-  installationDate?: string
-  latitude?: number
-  longitude?: number
-  addressCode?: string
-  address?: Address
-  connectivityConfig: ConnectivityConfig
-  lastReading?: Reading
-  isActive: boolean
+  brand: DeviceBrand
+  modelCode: string
+  // Primary communication technology (backward compatible)
+  communicationTechnology: CommunicationTechnology
+  integrationType: IntegrationType
+  // Primary field definitions (for backward compatibility)
+  fieldDefinitions: DeviceFieldDefinition[]
+  decoderFunction?: string
+  testPayload?: string
+  expectedOutput?: Record<string, unknown>
+  lastTestedAt?: string
+  lastTestSucceeded?: boolean
+  batteryLifeMonths?: number
+  specifications?: Record<string, unknown>
+  // Multiple communication technologies with their configs
+  communicationConfigs?: DeviceCommunicationConfig[]
   createdAt: string
   updatedAt: string
-  customer?: Customer
-  profile?: MeterProfile
+  // Relations
+  compatibleMeterProfiles?: MeterProfile[]
+}
+
+// =============================================================================
+// NEW: Device (Physical Communication Unit - Inventory Item)
+// =============================================================================
+
+export interface Device {
+  id: string
+  tenantId: string
+  deviceProfileId: string
+  serialNumber: string
+  status: DeviceStatus
+  dynamicFields: Record<string, string>
+  lastSignalStrength?: number
+  lastBatteryLevel?: number
+  lastCommunicationAt?: string
+  metadata?: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+  // Relations
   tenant?: Tenant
+  deviceProfile?: DeviceProfile
+  meter?: Meter // Linked meter if deployed
 }
 
-export interface ConnectivityConfig {
-  primary?: TechnologyConfig
-  secondary?: TechnologyConfig
-  other?: TechnologyConfig[]
-}
-
-export interface TechnologyConfig {
-  technology: CommunicationTechnology
-  fields: Record<string, string>
-}
+// =============================================================================
+// Meter Profile (Mechanical Meter Specs)
+// =============================================================================
 
 export interface MeterProfile {
   id: string
@@ -243,19 +306,50 @@ export interface MeterProfile {
   q4?: number
   rValue?: number
   pressureLoss?: number
-  ipRating: IPRating
+  ipRating?: IPRating
   communicationModule: CommunicationModule
-  communicationConfig?: CommunicationConfig[]
-  batteryLife?: number
-  isActive: boolean
+  specifications?: Record<string, unknown>
   createdAt: string
   updatedAt: string
-  tenants?: Tenant[]
+  // Relations
+  compatibleDeviceProfiles?: DeviceProfile[]
+  allowedTenants?: Tenant[]
+  _count?: {
+    meters: number
+  }
 }
 
-export interface CommunicationConfig {
-  technology: CommunicationTechnology
-  decoderFunction?: string
+// =============================================================================
+// Meter (Asset - Pure Physical Meter, no connectivity)
+// =============================================================================
+
+export interface Meter {
+  id: string
+  tenantId: string
+  customerId: string // Now required
+  meterProfileId: string
+  activeDeviceId?: string // Linked device
+  serialNumber: string
+  initialIndex: number
+  installationDate: string
+  status: MeterStatus
+  valveStatus: ValveStatus
+  lastReadingValue?: number
+  lastReadingTime?: string
+  latitude?: number
+  longitude?: number
+  addressCode?: string
+  address?: Address
+  metadata?: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+  // Relations
+  tenant?: Tenant
+  customer?: Customer
+  meterProfile?: MeterProfile
+  activeDevice?: Device // The linked communication device
+  readings?: Reading[]
+  alarms?: Alarm[]
 }
 
 export interface Reading {
@@ -282,9 +376,11 @@ export interface Alarm {
   id: string
   meterId: string
   tenantId: string
-  alarmType: string
-  severity: string
-  message: string
+  type: string
+  status: string
+  severity: number
+  message?: string
+  details?: Record<string, unknown>
   acknowledgedAt?: string
   acknowledgedBy?: string
   resolvedAt?: string
@@ -296,14 +392,21 @@ export interface Alarm {
 export interface DecoderFunction {
   id: string
   name: string
-  technology: CommunicationTechnology
-  profileId?: string
-  functionCode: string
   description?: string
-  isActive: boolean
+  technology: CommunicationTechnology
+  functionCode: string
+  testPayload?: string
+  expectedOutput?: Record<string, unknown>
+  lastTestedAt?: string
+  lastTestSucceeded?: boolean
+  deviceProfileId: string
+  deviceProfile?: {
+    id: string
+    brand: DeviceBrand
+    modelCode: string
+  }
   createdAt: string
   updatedAt: string
-  profile?: MeterProfile
 }
 
 export interface PlatformSettings {
@@ -357,18 +460,34 @@ export interface LoginForm {
 
 export interface CreateMeterForm {
   tenantId: string
-  customerId?: string
-  profileId: string
+  customerId: string // Now required
+  meterProfileId: string
   serialNumber: string
-  deviceId?: string
-  initialIndex: number
-  status: MeterStatus
-  installationDate?: string
+  initialIndex?: number
+  status?: MeterStatus
+  installationDate: string
   latitude?: number
   longitude?: number
   addressCode?: string
-  address?: Address
-  connectivityConfig: ConnectivityConfig
+  address: Address
+  // Device configuration is now separate
+}
+
+export interface CreateDeviceForm {
+  tenantId: string
+  deviceProfileId: string
+  serialNumber: string
+  status?: DeviceStatus
+  dynamicFields: Record<string, string>
+  metadata?: Record<string, unknown>
+}
+
+export interface LinkDeviceForm {
+  deviceId: string
+}
+
+export interface UnlinkDeviceForm {
+  deviceStatus?: 'WAREHOUSE' | 'MAINTENANCE'
 }
 
 export interface CreateCustomerForm {
@@ -394,6 +513,10 @@ export interface DashboardStats {
   activeAlarms: number
   metersInMaintenance: number
   metersOffline: number
+  // New device stats
+  totalDevices?: number
+  devicesInWarehouse?: number
+  devicesDeployed?: number
 }
 
 export interface MeterMapData {
@@ -409,49 +532,54 @@ export interface MeterMapData {
 }
 
 // =============================================================================
-// Communication Technology Field Definitions
+// Communication Technology Field Definitions (Static Reference)
 // =============================================================================
 
 export interface TechFieldDefinition {
-  keyName: string
-  keyType: string
-  keyLength: number
-  validationRegex: string
+  name: string
+  label: string
+  type: string
+  length: number
+  regex: string
+  required: boolean
   description?: string
 }
 
 export const COMMUNICATION_TECH_FIELDS: Record<CommunicationTechnology, TechFieldDefinition[]> = {
   [CommunicationTechnology.SIGFOX]: [
-    { keyName: 'ID', keyType: 'Hexadecimal String', keyLength: 8, validationRegex: '^[a-fA-F0-9]{8}$' },
-    { keyName: 'PAC', keyType: 'Hexadecimal String', keyLength: 16, validationRegex: '^[a-fA-F0-9]{16}$' },
+    { name: 'ID', label: 'Sigfox ID', type: 'hex', length: 8, regex: '^[a-fA-F0-9]{8}$', required: true },
+    { name: 'PAC', label: 'PAC', type: 'hex', length: 16, regex: '^[a-fA-F0-9]{16}$', required: true },
   ],
   [CommunicationTechnology.LORAWAN]: [
-    { keyName: 'DevEUI', keyType: 'Hexadecimal String', keyLength: 16, validationRegex: '^[a-fA-F0-9]{16}$' },
-    { keyName: 'JoinEUI', keyType: 'Hexadecimal String', keyLength: 16, validationRegex: '^[a-fA-F0-9]{16}$' },
-    { keyName: 'AppKey', keyType: 'Hexadecimal String', keyLength: 32, validationRegex: '^[a-fA-F0-9]{32}$' },
+    { name: 'DevEUI', label: 'Device EUI', type: 'hex', length: 16, regex: '^[a-fA-F0-9]{16}$', required: true },
+    { name: 'JoinEUI', label: 'Join EUI', type: 'hex', length: 16, regex: '^[a-fA-F0-9]{16}$', required: true },
+    { name: 'AppKey', label: 'Application Key', type: 'hex', length: 32, regex: '^[a-fA-F0-9]{32}$', required: true },
   ],
   [CommunicationTechnology.NB_IOT]: [
-    { keyName: 'IMEI', keyType: 'Numeric String', keyLength: 15, validationRegex: '^[0-9]{15}$' },
-    { keyName: 'IMSI', keyType: 'Numeric String', keyLength: 15, validationRegex: '^[0-9]{15}$' },
+    { name: 'IMEI', label: 'IMEI', type: 'string', length: 15, regex: '^[0-9]{15}$', required: true },
+    { name: 'IMSI', label: 'IMSI', type: 'string', length: 15, regex: '^[0-9]{15}$', required: false },
+    { name: 'ICCID', label: 'SIM ICCID', type: 'string', length: 20, regex: '^[0-9]{18,20}$', required: false },
   ],
   [CommunicationTechnology.WM_BUS]: [
-    { keyName: 'ManufacturerId', keyType: 'String', keyLength: 3, validationRegex: '^[A-Z]{3}$' },
-    { keyName: 'DeviceId', keyType: 'Hexadecimal String', keyLength: 8, validationRegex: '^[a-fA-F0-9]{8}$' },
+    { name: 'ManufacturerId', label: 'Manufacturer ID', type: 'string', length: 3, regex: '^[A-Z]{3}$', required: true },
+    { name: 'DeviceId', label: 'Device ID', type: 'hex', length: 8, regex: '^[a-fA-F0-9]{8}$', required: true },
+    { name: 'EncryptionKey', label: 'Encryption Key', type: 'hex', length: 32, regex: '^[a-fA-F0-9]{32}$', required: false },
   ],
   [CommunicationTechnology.MIOTY]: [
-    { keyName: 'EUI', keyType: 'Hexadecimal String', keyLength: 16, validationRegex: '^[a-fA-F0-9]{16}$' },
+    { name: 'ShortAddress', label: 'Short Address', type: 'hex', length: 8, regex: '^[a-fA-F0-9]{8}$', required: true },
+    { name: 'EUI64', label: 'EUI-64', type: 'hex', length: 16, regex: '^[a-fA-F0-9]{16}$', required: true },
   ],
   [CommunicationTechnology.WIFI]: [
-    { keyName: 'MAC', keyType: 'MAC Address', keyLength: 17, validationRegex: '^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$' },
+    { name: 'MacAddress', label: 'MAC Address', type: 'string', length: 17, regex: '^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$', required: true },
   ],
   [CommunicationTechnology.BLUETOOTH]: [
-    { keyName: 'MAC', keyType: 'MAC Address', keyLength: 17, validationRegex: '^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$' },
+    { name: 'MacAddress', label: 'BLE MAC Address', type: 'string', length: 17, regex: '^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$', required: true },
   ],
   [CommunicationTechnology.NFC]: [
-    { keyName: 'UID', keyType: 'Hexadecimal String', keyLength: 14, validationRegex: '^[a-fA-F0-9]{14}$' },
+    { name: 'UID', label: 'NFC UID', type: 'hex', length: 14, regex: '^[a-fA-F0-9]{4,14}$', required: true },
   ],
   [CommunicationTechnology.OMS]: [
-    { keyName: 'DeviceId', keyType: 'Hexadecimal String', keyLength: 8, validationRegex: '^[a-fA-F0-9]{8}$' },
+    { name: 'ManufacturerId', label: 'Manufacturer ID', type: 'string', length: 3, regex: '^[A-Z]{3}$', required: true },
+    { name: 'DeviceId', label: 'Device ID', type: 'hex', length: 8, regex: '^[a-fA-F0-9]{8}$', required: true },
   ],
 }
-

@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { Plus, Trash2, Code } from 'lucide-vue-next'
+import { Plus, Trash2 } from 'lucide-vue-next'
 import {
   Brand,
   MeterType,
   DialType,
   IPRating,
   CommunicationModule,
-  CommunicationTechnology,
   type MeterProfile,
+  type DeviceProfile,
 } from '~/types'
 
 const props = defineProps<{
@@ -25,6 +25,8 @@ const toast = useToast()
 
 // State
 const isSubmitting = ref(false)
+const isLoadingDeviceProfiles = ref(false)
+const deviceProfiles = ref<DeviceProfile[]>([])
 
 // Enum options
 const brandOptions = Object.values(Brand).map(b => ({ label: b, value: b }))
@@ -32,7 +34,6 @@ const meterTypeOptions = Object.values(MeterType).map(t => ({ label: t.replace(/
 const dialTypeOptions = Object.values(DialType).map(t => ({ label: t.replace(/_/g, ' '), value: t }))
 const ipRatingOptions = Object.values(IPRating).map(r => ({ label: r, value: r }))
 const communicationModuleOptions = Object.values(CommunicationModule).map(m => ({ label: m.replace(/_/g, ' '), value: m }))
-const technologyOptions = Object.values(CommunicationTechnology).map(t => ({ label: t.replace(/_/g, ' '), value: t }))
 
 const connectionTypeOptions = [
   { label: 'Thread', value: 'THREAD' },
@@ -70,12 +71,9 @@ const formData = reactive({
   rValue: props.profile?.rValue,
   pressureLoss: props.profile?.pressureLoss,
   ipRating: props.profile?.ipRating || IPRating.IP67,
-  communicationModule: props.profile?.communicationModule || CommunicationModule.INTEGRATED,
-  batteryLifeMonths: props.profile?.batteryLife,
-  communicationConfigs: [] as {
-    technology: CommunicationTechnology
-    decoder: string
-  }[],
+  communicationModule: props.profile?.communicationModule || CommunicationModule.NONE,
+  // Compatible device profiles (for linking)
+  compatibleDeviceProfileIds: props.profile?.compatibleDeviceProfiles?.map(dp => dp.id) || [] as string[],
 })
 
 // Validation errors
@@ -99,28 +97,39 @@ watch([() => formData.q1, () => formData.q3], () => {
   }
 })
 
-// Initialize communication configs from existing profile
-watchEffect(() => {
-  if (props.profile?.communicationConfig) {
-    formData.communicationConfigs = props.profile.communicationConfig.map(c => ({
-      technology: c.technology,
-      decoder: c.decoderFunction || '',
-    }))
+// Fetch device profiles for compatibility selection
+const fetchDeviceProfiles = async () => {
+  isLoadingDeviceProfiles.value = true
+  try {
+    const response = await api.getList<DeviceProfile>('/api/v1/device-profiles', { limit: 100 })
+    deviceProfiles.value = response.data
+  } catch (error) {
+    console.error('Failed to fetch device profiles:', error)
+  } finally {
+    isLoadingDeviceProfiles.value = false
   }
-})
+}
 
-// Add communication config
-const addCommunicationConfig = () => {
-  formData.communicationConfigs.push({
-    technology: CommunicationTechnology.LORAWAN,
-    decoder: '// Decoder function\nfunction decode(payload) {\n  // Parse payload and return reading\n  return {\n    value: 0,\n    unit: "m3"\n  };\n}',
+// Toggle device profile compatibility
+const toggleDeviceProfile = (profileId: string) => {
+  const index = formData.compatibleDeviceProfileIds.indexOf(profileId)
+  if (index > -1) {
+    formData.compatibleDeviceProfileIds.splice(index, 1)
+  } else {
+    formData.compatibleDeviceProfileIds.push(profileId)
+  }
+}
+
+// Group device profiles by technology for display
+const deviceProfilesByTechnology = computed(() => {
+  const grouped: Record<string, DeviceProfile[]> = {}
+  deviceProfiles.value.forEach(dp => {
+    const tech = dp.communicationTechnology || 'OTHER'
+    if (!grouped[tech]) grouped[tech] = []
+    grouped[tech].push(dp)
   })
-}
-
-// Remove communication config
-const removeCommunicationConfig = (index: number) => {
-  formData.communicationConfigs.splice(index, 1)
-}
+  return grouped
+})
 
 // Validate form
 const validate = (): boolean => {
@@ -175,11 +184,8 @@ const handleSubmit = async () => {
       pressureLoss: formData.pressureLoss,
       ipRating: formData.ipRating,
       communicationModule: formData.communicationModule,
-      batteryLifeMonths: formData.batteryLifeMonths,
-      communicationConfigs: formData.communicationConfigs.map(c => ({
-        technology: c.technology,
-        decoder: c.decoder,
-      })),
+      // Send compatible device profile IDs
+      compatibleDeviceProfileIds: formData.compatibleDeviceProfileIds,
     }
     
     if (isEditMode.value && props.profile) {
@@ -198,6 +204,11 @@ const handleSubmit = async () => {
     isSubmitting.value = false
   }
 }
+
+// Fetch device profiles on mount
+onMounted(() => {
+  fetchDeviceProfiles()
+})
 </script>
 
 <template>
@@ -403,81 +414,86 @@ const handleSubmit = async () => {
       </div>
     </div>
     
-    <!-- Communication -->
+    <!-- Communication Module -->
     <div class="space-y-4 pt-4 border-t border-border">
-      <h3 class="font-medium text-lg">Communication</h3>
+      <h3 class="font-medium text-lg">Communication Module</h3>
+      <p class="text-sm text-muted-foreground">
+        Specify if this meter has an integrated communication module, supports retrofit modules, or is purely mechanical.
+      </p>
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <UiLabel>Communication Module</UiLabel>
+          <UiLabel>Module Type</UiLabel>
           <UiSelect
             v-model="formData.communicationModule"
             :options="communicationModuleOptions"
           />
         </div>
-        
-        <div v-if="formData.communicationModule !== 'NONE'">
-          <UiLabel>Battery Life (months)</UiLabel>
-          <UiInput
-            v-model.number="formData.batteryLifeMonths"
-            type="number"
-            placeholder="e.g. 120"
-          />
-        </div>
       </div>
     </div>
     
-    <!-- Communication Technologies & Decoders -->
+    <!-- Compatible Device Profiles -->
     <div v-if="formData.communicationModule !== 'NONE'" class="space-y-4 pt-4 border-t border-border">
-      <div class="flex items-center justify-between">
-        <div>
-          <h3 class="font-medium text-lg">Communication Technologies</h3>
-          <p class="text-sm text-muted-foreground">Configure supported technologies and decoder functions</p>
-        </div>
-        <UiButton type="button" variant="outline" size="sm" @click="addCommunicationConfig">
-          <Plus class="h-4 w-4" />
-          Add Technology
-        </UiButton>
+      <div>
+        <h3 class="font-medium text-lg">Compatible Device Profiles</h3>
+        <p class="text-sm text-muted-foreground">
+          Select device profiles that are compatible with this meter. This determines which communication devices can be linked to meters using this profile.
+        </p>
       </div>
       
-      <div v-if="formData.communicationConfigs.length === 0" class="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
-        <Code class="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p>No communication technologies configured</p>
-        <p class="text-sm">Click "Add Technology" to configure decoders</p>
+      <div v-if="isLoadingDeviceProfiles" class="flex items-center justify-center py-8">
+        <UiSpinner />
       </div>
       
-      <div
-        v-for="(config, index) in formData.communicationConfigs"
-        :key="index"
-        class="p-4 rounded-lg border border-border space-y-4"
-      >
-        <div class="flex items-center justify-between">
-          <UiSelect
-            v-model="config.technology"
-            :options="technologyOptions"
-            class="w-48"
-          />
-          <UiButton
-            type="button"
-            variant="ghost"
-            size="icon"
-            @click="removeCommunicationConfig(index)"
-          >
-            <Trash2 class="h-4 w-4 text-destructive" />
-          </UiButton>
+      <div v-else-if="deviceProfiles.length === 0" class="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
+        <p>No device profiles available</p>
+        <p class="text-sm">Create device profiles first to set up compatibility</p>
+      </div>
+      
+      <div v-else class="space-y-4">
+        <!-- Group by technology -->
+        <div
+          v-for="(profiles, technology) in deviceProfilesByTechnology"
+          :key="technology"
+          class="space-y-2"
+        >
+          <h4 class="text-sm font-medium text-muted-foreground">
+            {{ technology.replace(/_/g, '-') }}
+          </h4>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div
+              v-for="profile in profiles"
+              :key="profile.id"
+              class="p-3 rounded-lg border cursor-pointer transition-colors"
+              :class="formData.compatibleDeviceProfileIds.includes(profile.id) 
+                ? 'border-primary bg-primary/5' 
+                : 'border-border hover:border-primary/50'"
+              @click="toggleDeviceProfile(profile.id)"
+            >
+              <div class="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  :checked="formData.compatibleDeviceProfileIds.includes(profile.id)"
+                  class="rounded border-input"
+                  @click.stop
+                  @change="toggleDeviceProfile(profile.id)"
+                />
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium truncate">{{ profile.brand }} {{ profile.modelCode }}</p>
+                  <p class="text-xs text-muted-foreground">
+                    {{ profile.integrationType }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         
-        <div>
-          <UiLabel>Decoder Function (JavaScript)</UiLabel>
-          <textarea
-            v-model="config.decoder"
-            class="w-full h-48 p-3 rounded-lg border border-border bg-muted/50 font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="// Decoder function code..."
-          />
-          <p class="text-xs text-muted-foreground mt-1">
-            Write a JavaScript function to decode payloads from this technology
-          </p>
-        </div>
+        <!-- Selected count -->
+        <p class="text-sm text-muted-foreground">
+          {{ formData.compatibleDeviceProfileIds.length }} device profile(s) selected
+        </p>
       </div>
     </div>
     

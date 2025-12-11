@@ -10,6 +10,7 @@
     "liveReadings": "Canlı Okumalar",
     "customers": "Müşteriler",
     "meters": "Sayaçlar",
+    "devices": "Cihaz Envanteri",
     "profiles": "Profiller",
     "decoders": "Çözücü Fonksiyonlar",
     "iam": "Kimlik Yönetimi",
@@ -143,11 +144,46 @@
     }
   },
   "profiles": {
-    "title": "Sayaç Profilleri",
-    "description": "Sayaç modelleri ve iletişim yapılandırmalarını yönetin",
+    "title": "Profiller",
+    "description": "Sayaç ve cihaz profillerini yönetin",
+    "meterProfiles": "Sayaç Profilleri",
+    "meterProfilesDescription": "Mekanik su sayacı özellikleri",
+    "deviceProfiles": "Cihaz Profilleri",
+    "deviceProfilesDescription": "İletişim cihazı yapılandırmaları ve çözücüler",
     "addProfile": "Profil Ekle",
+    "addMeterProfile": "Sayaç Profili Ekle",
+    "addDeviceProfile": "Cihaz Profili Ekle",
     "noProfiles": "Profil bulunamadı",
-    "noProfilesHint": "Başlamak için yeni bir sayaç profili ekleyin"
+    "noProfilesHint": "Başlamak için yeni bir profil ekleyin"
+  },
+  "devices": {
+    "title": "Cihaz Envanteri",
+    "description": "İletişim cihazlarını ve modüllerini yönetin",
+    "addDevice": "Cihaz Ekle",
+    "noDevices": "Cihaz bulunamadı",
+    "noDevicesHint": "Envanterinize yeni bir cihaz ekleyin",
+    "createTitle": "Yeni Cihaz Ekle",
+    "createDescription": "Envanterinize bir iletişim cihazı ekleyin",
+    "inWarehouse": "Depoda",
+    "deployed": "Dağıtıldı",
+    "inMaintenance": "Bakımda",
+    "linkDevice": "Cihaz Bağla",
+    "unlinkDevice": "Cihaz Bağlantısını Kes",
+    "selectFromInventory": "Envanterden Seç",
+    "createNew": "Yeni Cihaz Oluştur",
+    "noDeviceLinked": "Bağlı Cihaz Yok",
+    "mechanicalOnly": "Sadece Mekanik",
+    "columns": {
+      "serial": "Seri No",
+      "identifier": "Tanımlayıcı",
+      "brand": "Marka",
+      "model": "Model",
+      "technology": "Teknoloji",
+      "status": "Durum",
+      "linkedMeter": "Bağlı Sayaç",
+      "battery": "Batarya",
+      "lastComm": "Son İletişim"
+    }
   },
   "tenants": {
     "title": "Kiracılar",
@@ -252,4 +288,3 @@
     "selectTenant": "Seçin"
   }
 }
-

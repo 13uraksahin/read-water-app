@@ -10,7 +10,15 @@ export const useApi = () => {
   const config = useRuntimeConfig()
   const authStore = useAuthStore()
   
-  const baseUrl = config.public.apiBase
+  // Determine API base URL based on tunnel configuration
+  const getBaseUrl = () => {
+    if (config.public.useTunnel) {
+      return config.public.tunnelApiUrl || 'https://read-water-api.portall.com.tr'
+    }
+    return config.public.apiBase
+  }
+  
+  const baseUrl = getBaseUrl()
   
   const getHeaders = (): Record<string, string> => {
     const headers: Record<string, string> = {
@@ -53,12 +61,12 @@ export const useApi = () => {
     }
   }
   
-  const post = async <T>(endpoint: string, body?: unknown, options?: FetchOptions): Promise<T> => {
+  const post = async <T>(endpoint: string, body?: Record<string, unknown> | unknown[], options?: FetchOptions): Promise<T> => {
     try {
       return await $fetch<T>(`${baseUrl}${endpoint}`, {
         method: 'POST',
         headers: getHeaders(),
-        body,
+        body: body as BodyInit | Record<string, unknown> | null | undefined,
         ...options,
       })
     } catch (error) {
@@ -66,12 +74,12 @@ export const useApi = () => {
     }
   }
   
-  const put = async <T>(endpoint: string, body?: unknown, options?: FetchOptions): Promise<T> => {
+  const put = async <T>(endpoint: string, body?: Record<string, unknown> | unknown[], options?: FetchOptions): Promise<T> => {
     try {
       return await $fetch<T>(`${baseUrl}${endpoint}`, {
         method: 'PUT',
         headers: getHeaders(),
-        body,
+        body: body as BodyInit | Record<string, unknown> | null | undefined,
         ...options,
       })
     } catch (error) {
@@ -79,12 +87,12 @@ export const useApi = () => {
     }
   }
   
-  const patch = async <T>(endpoint: string, body?: unknown, options?: FetchOptions): Promise<T> => {
+  const patch = async <T>(endpoint: string, body?: Record<string, unknown> | unknown[], options?: FetchOptions): Promise<T> => {
     try {
       return await $fetch<T>(`${baseUrl}${endpoint}`, {
         method: 'PATCH',
         headers: getHeaders(),
-        body,
+        body: body as BodyInit | Record<string, unknown> | null | undefined,
         ...options,
       })
     } catch (error) {
@@ -129,11 +137,11 @@ export const useApi = () => {
     return get<ApiResponse<T>>(`${endpoint}/${id}`)
   }
   
-  const create = async <T>(endpoint: string, data: unknown): Promise<ApiResponse<T>> => {
+  const create = async <T>(endpoint: string, data: Record<string, unknown> | unknown[]): Promise<ApiResponse<T>> => {
     return post<ApiResponse<T>>(endpoint, data)
   }
   
-  const update = async <T>(endpoint: string, id: string, data: unknown): Promise<ApiResponse<T>> => {
+  const update = async <T>(endpoint: string, id: string, data: Record<string, unknown> | unknown[]): Promise<ApiResponse<T>> => {
     return patch<ApiResponse<T>>(`${endpoint}/${id}`, data)
   }
   

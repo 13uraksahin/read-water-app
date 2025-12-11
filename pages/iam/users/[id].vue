@@ -159,7 +159,7 @@ const handleEditSuccess = () => {
           <UiCardContent>
             <div class="flex items-start gap-6">
               <!-- Avatar -->
-              <UiAvatar :fallback="user.firstName?.charAt(0)" size="xl" />
+              <UiAvatar :fallback="user.firstName?.charAt(0)" size="lg" class="h-16 w-16" />
               
               <!-- Details grid -->
               <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">

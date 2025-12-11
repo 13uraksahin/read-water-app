@@ -101,7 +101,7 @@ export const useAppStore = defineStore('app', {
         this.tenants = response.data
         
         // Set default active tenant if not set
-        if (!this.activeTenantId && this.tenants.length > 0) {
+        if (!this.activeTenantId && this.tenants.length > 0 && this.tenants[0]) {
           this.setActiveTenant(this.tenants[0].id)
         }
       } catch (error) {

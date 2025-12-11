@@ -15,6 +15,15 @@ export default defineNuxtPlugin(() => {
   let connectionAttempts = 0
   const maxRetries = 5
   
+  // Determine socket URL based on tunnel configuration
+  const getSocketUrl = () => {
+    // If useTunnel is enabled, use the tunnel API URL
+    if (config.public.useTunnel) {
+      return config.public.tunnelApiUrl || 'https://read-water-api.portall.com.tr'
+    }
+    return config.public.socketUrl
+  }
+  
   const connect = () => {
     if (socket?.connected) return
     
@@ -24,13 +33,20 @@ export default defineNuxtPlugin(() => {
       return
     }
     
-    socket = io(`${config.public.socketUrl}/realtime`, {
+    const socketUrl = getSocketUrl()
+    console.log('[Socket] Connecting to:', socketUrl)
+    
+    socket = io(`${socketUrl}/realtime`, {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      // Use polling first for Cloudflare tunnel compatibility, then upgrade to websocket
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: maxRetries,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
+      // Cloudflare tunnel support
+      withCredentials: true,
+      forceNew: true,
     })
     
     // Connection events
@@ -76,7 +92,7 @@ export default defineNuxtPlugin(() => {
       appStore.addNotification({
         type: 'error',
         title: 'Alarm Alert',
-        message: alarm.message,
+        message: alarm.message || 'New alarm triggered',
       })
     })
     
@@ -85,7 +101,7 @@ export default defineNuxtPlugin(() => {
       appStore.addNotification({
         type: 'success',
         title: 'Alarm Resolved',
-        message: alarm.message,
+        message: alarm.message || 'Alarm has been resolved',
       })
     })
     

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Activity, RefreshCw, Download, Filter, Wifi, WifiOff } from 'lucide-vue-next'
 import { formatDateTime, formatWaterUsage } from '~/lib/utils'
-import type { Reading } from '~/types'
 
 definePageMeta({
   middleware: ['auth'],
@@ -44,13 +43,6 @@ const goToPage = (page: number) => {
 // Refresh readings
 const refreshReadings = () => {
   readingsStore.fetchReadings()
-}
-
-// Get status color
-const getStatusColor = (reading: Reading): string => {
-  if (!reading.signalStrength || reading.signalStrength < -100) return 'text-gray-500'
-  if (reading.batteryLevel && reading.batteryLevel < 20) return 'text-orange-500'
-  return 'text-green-500'
 }
 </script>
 
@@ -158,7 +150,7 @@ const getStatusColor = (reading: Reading): string => {
             <UiTableRow
               v-for="reading in displayReadings"
               :key="reading.id"
-              :class="{ 'bg-primary/5': readingsStore.liveReadings.some(r => r.id === reading.id) }"
+              :class="readingsStore.liveReadings.some(r => r.id === reading.id) ? 'bg-primary/5' : ''"
             >
               <UiTableCell class="font-mono text-xs">
                 {{ formatDateTime(reading.time) }}

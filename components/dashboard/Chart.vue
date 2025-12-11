@@ -32,7 +32,7 @@ const generateMockData = () => {
 // Chart options
 const chartOptions = computed(() => ({
   chart: {
-    type: 'area',
+    type: 'area' as const,
     toolbar: {
       show: false,
     },
@@ -55,7 +55,7 @@ const chartOptions = computed(() => ({
     },
   },
   stroke: {
-    curve: 'smooth',
+    curve: 'smooth' as const,
     width: 2,
   },
   dataLabels: {
@@ -66,7 +66,7 @@ const chartOptions = computed(() => ({
     strokeDashArray: 4,
   },
   xaxis: {
-    type: 'datetime',
+    type: 'datetime' as const,
     labels: {
       style: {
         colors: 'hsl(215 20.2% 65.1%)',

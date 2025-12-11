@@ -8,6 +8,7 @@ import {
   Settings,
   Building2,
   Code2,
+  Radio,
   ChevronDown,
   ChevronRight,
   Menu,
@@ -46,6 +47,11 @@ const navItems = computed(() => [
     labelKey: 'nav.meters',
     icon: Gauge,
     to: '/meters',
+  },
+  {
+    labelKey: 'nav.devices',
+    icon: Radio,
+    to: '/devices',
   },
   {
     labelKey: 'nav.profiles',
@@ -88,7 +94,7 @@ const currentLocaleName = computed(() => {
 })
 
 const changeLanguage = (code: string) => {
-  setLocale(code)
+  setLocale(code as 'en' | 'tr' | 'fr')
   showLanguageMenu.value = false
 }
 
