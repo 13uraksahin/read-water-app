@@ -134,9 +134,12 @@ const validate = (): boolean => {
   // Clear previous errors
   Object.keys(errors).forEach(key => delete errors[key])
   
-  if (!formData.tenantId) errors.tenantId = 'Tenant is required'
-  if (!formData.deviceProfileId) errors.deviceProfileId = 'Device profile is required'
-  if (!formData.serialNumber) errors.serialNumber = 'Serial number is required'
+  // Only validate create-only fields when not in edit mode
+  if (!isEditMode.value) {
+    if (!formData.tenantId) errors.tenantId = 'Tenant is required'
+    if (!formData.deviceProfileId) errors.deviceProfileId = 'Device profile is required'
+    if (!formData.serialNumber) errors.serialNumber = 'Serial number is required'
+  }
   
   // Validate dynamic fields
   fieldDefinitions.value.forEach(def => {
@@ -161,17 +164,22 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
+    // Build payload - exclude read-only fields in edit mode
     const payload = {
-      tenantId: formData.tenantId,
-      deviceProfileId: formData.deviceProfileId,
-      serialNumber: formData.serialNumber,
+      // Fields only allowed on create
+      ...(isEditMode.value ? {} : {
+        tenantId: formData.tenantId,
+        deviceProfileId: formData.deviceProfileId,
+        serialNumber: formData.serialNumber,
+      }),
+      // Fields allowed on both create and update
       status: formData.status,
       dynamicFields: formData.dynamicFields,
       metadata: formData.metadata,
     }
     
     if (isEditMode.value && props.device) {
-      await api.put(`/api/v1/devices/${props.device.id}`, payload)
+      await api.patch(`/api/v1/devices/${props.device.id}`, payload)
       toast.success('Device updated successfully')
     } else {
       await api.post('/api/v1/devices', payload)
@@ -215,6 +223,9 @@ onMounted(() => {
               :disabled="isEditMode"
             />
             <p v-if="errors.tenantId" class="text-xs text-destructive mt-1">{{ errors.tenantId }}</p>
+            <p v-else-if="isEditMode" class="text-xs text-muted-foreground mt-1">
+              Tenant cannot be changed after creation
+            </p>
           </div>
           
           <div>
@@ -230,6 +241,9 @@ onMounted(() => {
               :disabled="isEditMode"
             />
             <p v-if="errors.deviceProfileId" class="text-xs text-destructive mt-1">{{ errors.deviceProfileId }}</p>
+            <p v-else-if="isEditMode" class="text-xs text-muted-foreground mt-1">
+              Device profile cannot be changed after creation
+            </p>
           </div>
           
           <div>
@@ -238,8 +252,12 @@ onMounted(() => {
               v-model="formData.serialNumber"
               placeholder="e.g. DEV-001234"
               :error="!!errors.serialNumber"
+              :disabled="isEditMode"
             />
             <p v-if="errors.serialNumber" class="text-xs text-destructive mt-1">{{ errors.serialNumber }}</p>
+            <p v-else-if="isEditMode" class="text-xs text-muted-foreground mt-1">
+              Serial number cannot be changed after creation
+            </p>
           </div>
           
           <div>

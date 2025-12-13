@@ -233,7 +233,8 @@ const validateStep = (step: number): boolean => {
   Object.keys(errors).forEach(key => delete errors[key])
   
   if (step === 1) {
-    if (!formData.tenantId) errors.tenantId = 'Tenant is required'
+    // Only validate create-only fields when not in edit mode
+    if (!isEditMode.value && !formData.tenantId) errors.tenantId = 'Tenant is required'
     if (!formData.customerId) errors.customerId = 'Customer is required'
     if (!formData.meterProfileId) errors.meterProfileId = 'Meter profile is required'
     if (!formData.serialNumber) errors.serialNumber = 'Serial number is required'
@@ -280,15 +281,19 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
-    // Build meter payload
+    // Build meter payload - exclude read-only fields in edit mode
     const meterPayload = {
-      tenantId: formData.tenantId,
+      // Fields only allowed on create
+      ...(isEditMode.value ? {} : {
+        tenantId: formData.tenantId,
+        initialIndex: formData.initialIndex,
+        installationDate: formData.installationDate,
+      }),
+      // Fields allowed on both create and update
       customerId: formData.customerId,
       meterProfileId: formData.meterProfileId,
       serialNumber: formData.serialNumber,
-      initialIndex: formData.initialIndex,
       status: formData.status,
-      installationDate: formData.installationDate,
       latitude: formData.latitude,
       longitude: formData.longitude,
       addressCode: formData.addressCode || undefined,
@@ -298,7 +303,7 @@ const handleSubmit = async () => {
     let meterId: string
     
     if (isEditMode.value && props.meter) {
-      await api.put(`/api/v1/meters/${props.meter.id}`, meterPayload)
+      await api.patch(`/api/v1/meters/${props.meter.id}`, meterPayload)
       meterId = props.meter.id
       toast.success('Meter updated successfully')
     } else {
@@ -392,6 +397,9 @@ onMounted(() => {
               :disabled="isEditMode"
             />
             <p v-if="errors.tenantId" class="text-xs text-destructive mt-1">{{ errors.tenantId }}</p>
+            <p v-else-if="isEditMode" class="text-xs text-muted-foreground mt-1">
+              Tenant cannot be changed after creation
+            </p>
           </div>
           
           <div>
@@ -434,7 +442,16 @@ onMounted(() => {
           
           <div>
             <UiLabel>Initial Index (m³)</UiLabel>
-            <UiInput v-model.number="formData.initialIndex" type="number" min="0" step="0.001" />
+            <UiInput 
+              v-model.number="formData.initialIndex" 
+              type="number" 
+              min="0" 
+              step="0.001" 
+              :disabled="isEditMode"
+            />
+            <p v-if="isEditMode" class="text-xs text-muted-foreground mt-1">
+              Initial index cannot be changed after creation
+            </p>
           </div>
           
           <div>
@@ -449,7 +466,14 @@ onMounted(() => {
           
           <div>
             <UiLabel>Installation Date</UiLabel>
-            <UiInput v-model="formData.installationDate" type="datetime-local" />
+            <UiInput 
+              v-model="formData.installationDate" 
+              type="datetime-local" 
+              :disabled="isEditMode"
+            />
+            <p v-if="isEditMode" class="text-xs text-muted-foreground mt-1">
+              Installation date cannot be changed after creation
+            </p>
           </div>
         </div>
         

@@ -135,12 +135,15 @@ const deviceProfilesByTechnology = computed(() => {
 const validate = (): boolean => {
   Object.keys(errors).forEach(key => delete errors[key])
   
-  if (!formData.brand) {
-    errors.brand = 'Brand is required'
-  }
-  
-  if (!formData.modelCode.trim()) {
-    errors.modelCode = 'Model code is required'
+  // Only validate create-only fields when not in edit mode
+  if (!isEditMode.value) {
+    if (!formData.brand) {
+      errors.brand = 'Brand is required'
+    }
+    
+    if (!formData.modelCode.trim()) {
+      errors.modelCode = 'Model code is required'
+    }
   }
   
   if (!formData.meterType) {
@@ -164,9 +167,14 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
+    // Build payload - exclude read-only fields in edit mode
     const payload = {
-      brand: formData.brand,
-      modelCode: formData.modelCode,
+      // Fields only allowed on create
+      ...(isEditMode.value ? {} : {
+        brand: formData.brand,
+        modelCode: formData.modelCode,
+      }),
+      // Fields allowed on both create and update
       meterType: formData.meterType,
       dialType: formData.dialType,
       connectionType: formData.connectionType,
@@ -225,8 +233,12 @@ onMounted(() => {
             :options="brandOptions"
             placeholder="Select brand"
             :error="!!errors.brand"
+            :disabled="isEditMode"
           />
           <p v-if="errors.brand" class="text-xs text-destructive mt-1">{{ errors.brand }}</p>
+          <p v-else-if="isEditMode" class="text-xs text-muted-foreground mt-1">
+            Brand cannot be changed after creation
+          </p>
         </div>
         
         <div>
@@ -235,8 +247,12 @@ onMounted(() => {
             v-model="formData.modelCode"
             placeholder="e.g. WM-100"
             :error="!!errors.modelCode"
+            :disabled="isEditMode"
           />
           <p v-if="errors.modelCode" class="text-xs text-destructive mt-1">{{ errors.modelCode }}</p>
+          <p v-else-if="isEditMode" class="text-xs text-muted-foreground mt-1">
+            Model code cannot be changed after creation
+          </p>
         </div>
         
         <div>

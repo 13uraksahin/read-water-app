@@ -83,17 +83,23 @@ const fetchUsers = async () => {
   }
 }
 
-// Fetch allowed profiles
+// Fetch allowed profiles for this tenant
 const fetchProfiles = async () => {
   isLoadingProfiles.value = true
   try {
-    const response = await api.getList<MeterProfile>('/api/v1/profiles', {
-      tenantId: tenantId.value,
-      limit: 100,
-    })
-    allowedProfiles.value = response.data
+    // First check if tenant object has allowedProfiles embedded
+    if (tenant.value?.allowedProfiles?.length) {
+      allowedProfiles.value = tenant.value.allowedProfiles
+      return
+    }
+    
+    // Try to fetch allowed profiles from tenant-specific endpoint
+    const response = await api.get<MeterProfile[]>(`/api/v1/tenants/${tenantId.value}/profiles`)
+    allowedProfiles.value = response
   } catch (error) {
+    // If no profiles available, just leave empty
     console.error('Failed to fetch profiles:', error)
+    allowedProfiles.value = []
   } finally {
     isLoadingProfiles.value = false
   }
@@ -119,8 +125,8 @@ const formatAddress = (address?: Tenant['address']): string => {
 }
 
 // Initial fetch
-onMounted(() => {
-  fetchTenant()
+onMounted(async () => {
+  await fetchTenant()
   fetchUsers()
   fetchProfiles()
 })

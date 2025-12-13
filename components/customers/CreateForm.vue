@@ -113,7 +113,7 @@ const handleSubmit = async () => {
         }
     
     const payload = {
-      tenantId: formData.tenantId,
+      ...(isEditMode.value ? {} : { tenantId: formData.tenantId }),
       customerType: formData.customerType,
       consumptionType: formData.consumptionType,
       details,
@@ -160,7 +160,11 @@ onMounted(() => {
             v-model="formData.tenantId"
             :options="tenants.map(t => ({ label: t.name, value: t.id }))"
             placeholder="Select tenant"
+            :disabled="isEditMode"
           />
+          <p v-if="isEditMode" class="text-xs text-muted-foreground mt-1">
+            Tenant cannot be changed after creation
+          </p>
         </div>
         
         <div>

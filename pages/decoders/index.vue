@@ -34,7 +34,7 @@ onMounted(() => {
 // Navigate to profile to edit decoder
 const goToProfile = (decoder: DecoderFunction) => {
   if (decoder.deviceProfileId) {
-    navigateTo(`/profiles/devices/${decoder.deviceProfileId}`)
+    navigateTo(`/profiles/device/${decoder.deviceProfileId}`)
   }
 }
 </script>

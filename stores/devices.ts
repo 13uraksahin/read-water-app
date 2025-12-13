@@ -168,12 +168,12 @@ export const useDeviceStore = defineStore('devices', {
       }
     },
     
-    // Update device
+    // Update device (uses PATCH for partial updates)
     async updateDevice(id: string, data: Partial<CreateDeviceForm>): Promise<Device> {
       const api = useApi()
       
       try {
-        const response = await api.put<Device>(`/api/v1/devices/${id}`, { ...data })
+        const response = await api.patch<Device>(`/api/v1/devices/${id}`, { ...data })
         // Refresh list
         await this.fetchDevices()
         return response

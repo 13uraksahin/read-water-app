@@ -224,12 +224,16 @@ const testDecoder = async (configIndex: number) => {
 const validate = (): boolean => {
   Object.keys(errors).forEach(key => delete errors[key])
   
-  if (!formData.brand) errors.brand = 'Brand is required'
-  if (!formData.modelCode) errors.modelCode = 'Model code is required'
-  if (!formData.integrationType) errors.integrationType = 'Integration type is required'
-  if (formData.communicationConfigs.length === 0) {
-    errors.technologies = 'At least one communication technology is required'
+  // Only validate create-only fields when not in edit mode
+  if (!isEditMode.value) {
+    if (!formData.brand) errors.brand = 'Brand is required'
+    if (!formData.modelCode) errors.modelCode = 'Model code is required'
+    if (formData.communicationConfigs.length === 0) {
+      errors.technologies = 'At least one communication technology is required'
+    }
   }
+  
+  if (!formData.integrationType) errors.integrationType = 'Integration type is required'
   
   // Validate each config
   formData.communicationConfigs.forEach((config, configIndex) => {
@@ -253,33 +257,27 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
-    // For backend compatibility, send the first technology as primary
-    // and include all configs in a separate field
+    // Use the first technology as the primary config
     const primaryConfig = formData.communicationConfigs[0]
     
+    // Build payload - exclude read-only fields in edit mode
     const payload = {
-      brand: formData.brand,
-      modelCode: formData.modelCode,
-      // Primary communication technology (for backward compatibility)
-      communicationTechnology: primaryConfig?.technology,
+      // Fields only allowed on create
+      ...(isEditMode.value ? {} : {
+        brand: formData.brand,
+        modelCode: formData.modelCode,
+        communicationTechnology: primaryConfig?.technology,
+      }),
+      // Fields allowed on both create and update
       integrationType: formData.integrationType,
       batteryLifeMonths: formData.batteryLifeMonths,
-      // Primary field definitions
       fieldDefinitions: primaryConfig?.fieldDefinitions.filter(f => f.name) || [],
-      // Primary decoder
       decoderFunction: primaryConfig?.decoderFunction || undefined,
       testPayload: primaryConfig?.testPayload || undefined,
-      // All communication configs (for future multi-tech support)
-      communicationConfigs: formData.communicationConfigs.map(config => ({
-        technology: config.technology,
-        fieldDefinitions: config.fieldDefinitions.filter(f => f.name),
-        decoderFunction: config.decoderFunction || undefined,
-        testPayload: config.testPayload || undefined,
-      })),
     }
     
     if (isEditMode.value && props.profile) {
-      await api.put(`/api/v1/device-profiles/${props.profile.id}`, payload)
+      await api.patch(`/api/v1/device-profiles/${props.profile.id}`, payload)
     } else {
       await api.post('/api/v1/device-profiles', payload)
     }
@@ -308,8 +306,12 @@ const handleSubmit = async () => {
             :options="brandOptions"
             placeholder="Select brand"
             :error="!!errors.brand"
+            :disabled="isEditMode"
           />
           <p v-if="errors.brand" class="text-xs text-destructive mt-1">{{ errors.brand }}</p>
+          <p v-else-if="isEditMode" class="text-xs text-muted-foreground mt-1">
+            Brand cannot be changed after creation
+          </p>
         </div>
         
         <div>
@@ -318,8 +320,12 @@ const handleSubmit = async () => {
             v-model="formData.modelCode"
             placeholder="e.g. LW-100"
             :error="!!errors.modelCode"
+            :disabled="isEditMode"
           />
           <p v-if="errors.modelCode" class="text-xs text-destructive mt-1">{{ errors.modelCode }}</p>
+          <p v-else-if="isEditMode" class="text-xs text-muted-foreground mt-1">
+            Model code cannot be changed after creation
+          </p>
         </div>
         
         <div>
@@ -358,6 +364,7 @@ const handleSubmit = async () => {
           </p>
         </div>
         <UiButton 
+          v-if="!isEditMode"
           type="button" 
           variant="outline" 
           size="sm" 
@@ -395,11 +402,16 @@ const handleSubmit = async () => {
                   ...availableTechnologies
                 ]"
                 class="w-48"
+                :disabled="isEditMode"
                 @update:model-value="(val: string | number) => updateTechnology(configIndex, val as CommunicationTechnology)"
               />
               <UiBadge variant="outline">Technology {{ configIndex + 1 }}</UiBadge>
+              <span v-if="isEditMode" class="text-xs text-muted-foreground">
+                (cannot be changed)
+              </span>
             </div>
             <UiButton
+              v-if="!isEditMode"
               type="button"
               variant="ghost"
               size="icon"

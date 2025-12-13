@@ -117,9 +117,11 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
+    // Build payload - exclude read-only fields in edit mode
     const payload = {
       name: formData.name,
-      parentId: formData.parentId || undefined,
+      // parentId can only be set on create (tenant hierarchy is immutable)
+      ...(isEditMode.value ? {} : { parentId: formData.parentId || undefined }),
       contactFirstName: formData.contactFirstName || undefined,
       contactLastName: formData.contactLastName || undefined,
       contactPhone: formData.contactPhone || undefined,

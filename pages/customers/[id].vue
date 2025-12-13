@@ -104,8 +104,9 @@ const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructiv
 // Calculate total consumption
 const totalConsumption = computed(() => {
   return meters.value.reduce((sum, meter) => {
-    const currentValue = meter.lastReadingValue ?? meter.initialIndex ?? 0
-    return sum + (currentValue - (meter.initialIndex ?? 0))
+    const currentValue = Number(meter.lastReadingValue ?? meter.initialIndex ?? 0)
+    const initialValue = Number(meter.initialIndex ?? 0)
+    return sum + (currentValue - initialValue)
   }, 0)
 })
 
@@ -418,10 +419,10 @@ const handleEditSuccess = () => {
                   </UiBadge>
                 </UiTableCell>
                 <UiTableCell>
-                  {{ (meter.lastReadingValue ?? meter.initialIndex ?? 0).toFixed(3) }} m³
+                  {{ Number(meter.lastReadingValue ?? meter.initialIndex ?? 0).toFixed(3) }} m³
                 </UiTableCell>
                 <UiTableCell>
-                  {{ ((meter.lastReadingValue ?? meter.initialIndex ?? 0) - (meter.initialIndex ?? 0)).toFixed(3) }} m³
+                  {{ (Number(meter.lastReadingValue ?? meter.initialIndex ?? 0) - Number(meter.initialIndex ?? 0)).toFixed(3) }} m³
                 </UiTableCell>
               </UiTableRow>
             </template>
