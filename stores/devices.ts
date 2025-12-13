@@ -112,7 +112,7 @@ export const useDeviceStore = defineStore('devices', {
       
       this.isLoadingProfiles = true
       try {
-        const response = await api.getList<DeviceProfile>('/api/v1/profiles/device-profiles', {
+        const response = await api.getList<DeviceProfile>('/api/v1/device-profiles', {
           limit: 100,
         })
         

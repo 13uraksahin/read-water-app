@@ -8,7 +8,19 @@
     "dev:tunnel": "NUXT_PUBLIC_USE_TUNNEL=true NUXT_PUBLIC_API_BASE=https://read-water-api.portall.com.tr NUXT_PUBLIC_SOCKET_URL=https://read-water-api.portall.com.tr nuxt dev --host",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:auth": "playwright test auth.spec.ts",
+    "test:iam": "playwright test iam.spec.ts",
+    "test:profiles": "playwright test configurations.spec.ts",
+    "test:devices": "playwright test inventory.spec.ts",
+    "test:meters": "playwright test assets.spec.ts",
+    "test:customers": "playwright test customers.spec.ts",
+    "test:realtime": "playwright test realtime.spec.ts",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.24.3",
@@ -33,6 +45,7 @@
     "vue3-apexcharts": "^1.10.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^25.0.0",
     "autoprefixer": "^10.4.22",
