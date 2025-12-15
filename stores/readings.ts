@@ -53,23 +53,26 @@ export const useReadingsStore = defineStore('readings', {
   actions: {
     async fetchReadings(params?: { page?: number; meterId?: string; tenantId?: string }) {
       const authStore = useAuthStore()
+      const appStore = useAppStore()
       if (!authStore.accessToken) return
       
       this.isLoading = true
       this.error = null
       
       try {
-        const config = useRuntimeConfig()
+        const apiBase = useApiUrl()
         const queryParams = new URLSearchParams()
         
         queryParams.set('page', String(params?.page ?? this.pagination.page))
         queryParams.set('limit', String(this.pagination.limit))
         
         if (params?.meterId) queryParams.set('meterId', params.meterId)
-        if (params?.tenantId) queryParams.set('tenantId', params.tenantId)
+        // Use provided tenantId or fall back to active tenant
+        const tenantId = params?.tenantId ?? appStore.activeTenantId
+        if (tenantId) queryParams.set('tenantId', tenantId)
         
         const response = await $fetch<PaginatedResponse<Reading>>(
-          `${config.public.apiBase}/api/v1/readings?${queryParams.toString()}`,
+          `${apiBase}/api/v1/readings?${queryParams.toString()}`,
           {
             headers: {
               Authorization: `Bearer ${authStore.accessToken}`,

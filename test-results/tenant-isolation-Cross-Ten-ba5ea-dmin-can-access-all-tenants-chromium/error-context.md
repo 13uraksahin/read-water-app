@@ -1,0 +1,154 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - link "RW Read Water" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e8]: RW
+        - generic [ref=e9]: Read Water
+      - navigation [ref=e10]:
+        - list [ref=e11]:
+          - listitem [ref=e12]:
+            - link "Dashboard" [ref=e13] [cursor=pointer]:
+              - /url: /
+              - img [ref=e14]
+              - generic [ref=e19]: Dashboard
+          - listitem [ref=e20]:
+            - link "Live Readings" [ref=e21] [cursor=pointer]:
+              - /url: /readings
+              - img [ref=e22]
+              - generic [ref=e24]: Live Readings
+          - listitem [ref=e25]:
+            - link "Customers" [ref=e26] [cursor=pointer]:
+              - /url: /customers
+              - img [ref=e27]
+              - generic [ref=e32]: Customers
+          - listitem [ref=e33]:
+            - link "Meters" [ref=e34] [cursor=pointer]:
+              - /url: /meters
+              - img [ref=e35]
+              - generic [ref=e38]: Meters
+          - listitem [ref=e39]:
+            - link "Device Inventory" [ref=e40] [cursor=pointer]:
+              - /url: /devices
+              - img [ref=e41]
+              - generic [ref=e47]: Device Inventory
+          - listitem [ref=e48]:
+            - link "Profiles" [ref=e49] [cursor=pointer]:
+              - /url: /profiles
+              - img [ref=e50]
+              - generic [ref=e53]: Profiles
+          - listitem [ref=e54]:
+            - link "Decoder Functions" [ref=e55] [cursor=pointer]:
+              - /url: /decoders
+              - img [ref=e56]
+              - generic [ref=e60]: Decoder Functions
+          - listitem [ref=e61]:
+            - generic [ref=e62]:
+              - button "IAM" [ref=e63] [cursor=pointer]:
+                - generic [ref=e64]:
+                  - img [ref=e65]
+                  - generic [ref=e69]: IAM
+                - img [ref=e70]
+              - list [ref=e72]:
+                - listitem [ref=e73]:
+                  - link "Tenants" [ref=e74] [cursor=pointer]:
+                    - /url: /iam/tenants
+                - listitem [ref=e75]:
+                  - link "Users" [ref=e76] [cursor=pointer]:
+                    - /url: /iam/users
+          - listitem [ref=e77]:
+            - link "Settings" [ref=e78] [cursor=pointer]:
+              - /url: /settings
+              - img [ref=e79]
+              - generic [ref=e82]: Settings
+      - generic [ref=e83]:
+        - button "English" [ref=e85] [cursor=pointer]:
+          - generic [ref=e86]:
+            - img [ref=e87]
+            - generic [ref=e90]: English
+          - img [ref=e91]
+        - button "Dark Mode" [ref=e93] [cursor=pointer]:
+          - img [ref=e94]
+          - generic [ref=e96]: Dark Mode
+        - generic [ref=e97]:
+          - generic [ref=e99]: S
+          - generic [ref=e100]:
+            - paragraph [ref=e101]: Super Admin
+            - paragraph [ref=e102]: PLATFORM_ADMIN
+          - button "Logout" [ref=e103] [cursor=pointer]:
+            - img [ref=e104]
+    - generic [ref=e107]:
+      - banner [ref=e108]:
+        - generic [ref=e110]:
+          - img [ref=e111]
+          - textbox "Search meters, customers..." [ref=e114]
+        - generic [ref=e115]:
+          - 'button "Tenant: ASKİ - Ankara Su ve Kanalizasyon İdaresi" [ref=e117] [cursor=pointer]':
+            - generic [ref=e118]: "Tenant:"
+            - generic [ref=e119]: ASKİ - Ankara Su ve Kanalizasyon İdaresi
+            - img [ref=e120]
+          - button [ref=e122] [cursor=pointer]:
+            - img [ref=e123]
+      - main [ref=e126]:
+        - generic [ref=e127]:
+          - generic [ref=e128]:
+            - generic [ref=e129]:
+              - heading "Tenants" [level=1] [ref=e130]:
+                - img [ref=e131]
+                - text: Tenants
+              - paragraph [ref=e135]: Manage tenant hierarchy and subscriptions
+            - button "Add Tenant" [ref=e136] [cursor=pointer]:
+              - img
+              - text: Add Tenant
+          - generic [ref=e138]:
+            - img [ref=e139]
+            - textbox "Search tenants..." [ref=e142]
+          - table [ref=e145]:
+            - rowgroup [ref=e146]:
+              - row "Name Path Status Plan Users Meters" [ref=e147]:
+                - columnheader "Name" [ref=e148]
+                - columnheader "Path" [ref=e149]
+                - columnheader "Status" [ref=e150]
+                - columnheader "Plan" [ref=e151]
+                - columnheader "Users" [ref=e152]
+                - columnheader "Meters" [ref=e153]
+            - rowgroup [ref=e154]:
+              - row "Read Water Platform root ACTIVE enterprise - -" [ref=e155] [cursor=pointer]:
+                - cell "Read Water Platform" [ref=e156]:
+                  - generic [ref=e157]:
+                    - button [ref=e158]:
+                      - img [ref=e159]
+                    - img [ref=e161]
+                    - generic [ref=e165]: Read Water Platform
+                - cell "root" [ref=e166]
+                - cell "ACTIVE" [ref=e167]:
+                  - generic [ref=e168]: ACTIVE
+                - cell "enterprise" [ref=e169]
+                - cell "-" [ref=e170]:
+                  - generic [ref=e171]:
+                    - img [ref=e172]
+                    - generic [ref=e177]: "-"
+                - cell "-" [ref=e178]:
+                  - generic [ref=e179]:
+                    - img [ref=e180]
+                    - generic [ref=e183]: "-"
+  - generic:
+    - img
+  - generic:
+    - generic:
+      - generic:
+        - button "Go to parent" [disabled]
+        - button "Open in editor"
+        - button "Close"
+  - generic [ref=e184]:
+    - button "Toggle Nuxt DevTools" [ref=e185] [cursor=pointer]:
+      - img [ref=e186]
+    - generic "Page load time" [ref=e189]:
+      - generic [ref=e190]: "22"
+      - generic [ref=e191]: ms
+    - button "Toggle Component Inspector" [ref=e193] [cursor=pointer]:
+      - img [ref=e194]
+```

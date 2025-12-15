@@ -1,0 +1,57 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - img [ref=e8]
+        - heading "Welcome to Read Water" [level=3] [ref=e11]
+        - paragraph [ref=e12]: Sign in to your account to continue
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]: Email
+          - textbox "Email" [ref=e17]:
+            - /placeholder: admin@readwater.io
+        - generic [ref=e18]:
+          - generic [ref=e19]: Password
+          - generic [ref=e20]:
+            - textbox "Password" [ref=e21]
+            - button [ref=e22] [cursor=pointer]:
+              - img [ref=e23]
+        - generic [ref=e26]:
+          - generic [ref=e27] [cursor=pointer]:
+            - checkbox "Remember me" [ref=e28]
+            - generic [ref=e29]: Remember me
+          - link "Forgot password?" [ref=e30] [cursor=pointer]:
+            - /url: "#"
+        - button "Sign In" [disabled]
+      - generic [ref=e31]:
+        - paragraph [ref=e32]:
+          - text: Don't have an account?
+          - link "Contact your administrator" [ref=e33] [cursor=pointer]:
+            - /url: "#"
+        - generic [ref=e34]:
+          - generic [ref=e35]: Remote Water Meter Reading Platform
+          - generic [ref=e36]: •
+          - generic [ref=e37]: v1.0.0
+    - generic [ref=e38]:
+      - paragraph [ref=e39]: "Demo credentials:"
+      - paragraph [ref=e40]: admin@readwater.io / Admin123!
+  - generic:
+    - img
+  - generic:
+    - generic:
+      - generic:
+        - button "Go to parent" [disabled]
+        - button "Open in editor"
+        - button "Close"
+  - generic [ref=e41]:
+    - button "Toggle Nuxt DevTools" [ref=e42] [cursor=pointer]:
+      - img [ref=e43]
+    - generic "Page load time" [ref=e46]:
+      - generic [ref=e47]: "44"
+      - generic [ref=e48]: ms
+    - button "Toggle Component Inspector" [ref=e50] [cursor=pointer]:
+      - img [ref=e51]
+```

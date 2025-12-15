@@ -3,31 +3,18 @@ const props = defineProps<{
   class?: string
 }>()
 
+// Stores
+const dashboardStore = useDashboardStore()
+const appStore = useAppStore()
+
 // Chart component (client-side only)
 const VueApexCharts = defineAsyncComponent(() =>
   import('vue3-apexcharts').then(m => m.default)
 )
 
-// Generate mock data for last 30 days
-const generateMockData = () => {
-  const data = []
-  const now = new Date()
-  
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(now)
-    date.setDate(date.getDate() - i)
-    
-    // Random consumption between 50 and 200 m³
-    const consumption = Math.floor(Math.random() * 150) + 50
-    
-    data.push({
-      x: date.getTime(),
-      y: consumption,
-    })
-  }
-  
-  return data
-}
+// Computed chart data from store
+const isLoading = computed(() => dashboardStore.consumptionLoading)
+const hasData = computed(() => dashboardStore.consumptionData.length > 0)
 
 // Chart options
 const chartOptions = computed(() => ({
@@ -89,7 +76,7 @@ const chartOptions = computed(() => ({
         colors: 'hsl(215 20.2% 65.1%)',
         fontSize: '11px',
       },
-      formatter: (val: number) => `${val} m³`,
+      formatter: (val: number) => `${val.toLocaleString()} m³`,
     },
   },
   tooltip: {
@@ -98,24 +85,35 @@ const chartOptions = computed(() => ({
       format: 'MMM dd, yyyy',
     },
     y: {
-      formatter: (val: number) => `${val} m³`,
+      formatter: (val: number) => `${val.toLocaleString()} m³`,
+    },
+  },
+  noData: {
+    text: 'No consumption data available',
+    style: {
+      color: 'hsl(215 20.2% 65.1%)',
+      fontSize: '14px',
     },
   },
 }))
 
-// Chart series
-const chartSeries = computed(() => [
-  {
-    name: 'Water Consumption',
-    data: generateMockData(),
-  },
-])
+// Chart series from store
+const chartSeries = computed(() => dashboardStore.chartSeries)
+
+// Fetch consumption data on mount
+onMounted(() => {
+  dashboardStore.fetchConsumptionChart(appStore.activeTenantId ?? undefined, 30)
+})
 </script>
 
 <template>
   <div :class="props.class">
     <ClientOnly>
+      <div v-if="isLoading" class="flex items-center justify-center h-full">
+        <UiSpinner size="lg" />
+      </div>
       <VueApexCharts
+        v-else
         type="area"
         height="100%"
         :options="chartOptions"

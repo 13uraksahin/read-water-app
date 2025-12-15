@@ -11,6 +11,7 @@ const { t } = useI18n()
 const api = useApi()
 const toast = useToast()
 const deviceStore = useDeviceStore()
+const appStore = useAppStore()
 
 // State
 const devices = ref<Device[]>([])
@@ -103,6 +104,12 @@ onMounted(async () => {
 
 // Watch for filter changes
 watch([searchQuery, statusFilter, brandFilter, techFilter], () => {
+  pagination.value.page = 1
+  fetchDevices()
+})
+
+// Watch for tenant changes and refetch
+watch(() => appStore.activeTenantId, () => {
   pagination.value.page = 1
   fetchDevices()
 })

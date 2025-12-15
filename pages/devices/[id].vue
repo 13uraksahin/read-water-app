@@ -450,6 +450,9 @@ onMounted(() => {
           </UiCardContent>
         </UiCard>
       </div>
+      
+      <!-- Device Messages Table -->
+      <DevicesMessagesTable :device-id="deviceId" />
     </template>
     
     <!-- Edit Dialog -->

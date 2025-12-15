@@ -7,18 +7,11 @@ import type { ApiResponse, PaginatedResponse } from '~/types'
 type FetchOptions = Parameters<typeof $fetch>[1]
 
 export const useApi = () => {
-  const config = useRuntimeConfig()
   const authStore = useAuthStore()
+  const appStore = useAppStore()
   
-  // Determine API base URL based on tunnel configuration
-  const getBaseUrl = () => {
-    if (config.public.useTunnel) {
-      return config.public.tunnelApiUrl || 'https://read-water-api.portall.com.tr'
-    }
-    return config.public.apiBase
-  }
-  
-  const baseUrl = getBaseUrl()
+  // Use the auto-detecting API URL composable
+  const baseUrl = useApiUrl()
   
   const getHeaders = (): Record<string, string> => {
     const headers: Record<string, string> = {
@@ -112,12 +105,39 @@ export const useApi = () => {
     }
   }
   
+  // Endpoints that support tenant filtering via tenantId query parameter
+  const TENANT_FILTERABLE_ENDPOINTS = [
+    '/api/v1/customers',
+    '/api/v1/meters',
+    '/api/v1/devices',
+    '/api/v1/readings',
+    '/api/v1/alarms',
+    '/api/v1/dashboard',
+    '/api/v1/users',
+  ]
+  
+  // Check if endpoint supports tenant filtering
+  const supportsTenantFilter = (endpoint: string): boolean => {
+    return TENANT_FILTERABLE_ENDPOINTS.some(e => endpoint.startsWith(e))
+  }
+  
   // Convenience methods for common patterns
   const getList = async <T>(
     endpoint: string,
-    params?: Record<string, string | number | boolean | undefined>
+    params?: Record<string, string | number | boolean | undefined>,
+    options?: { skipTenantFilter?: boolean }
   ): Promise<PaginatedResponse<T>> => {
     const queryParams = new URLSearchParams()
+    
+    // Auto-inject activeTenantId only for supported endpoints
+    const shouldInjectTenant = !options?.skipTenantFilter && 
+                               appStore.activeTenantId && 
+                               !params?.tenantId &&
+                               supportsTenantFilter(endpoint)
+    
+    if (shouldInjectTenant) {
+      queryParams.set('tenantId', appStore.activeTenantId)
+    }
     
     if (params) {
       Object.entries(params).forEach(([key, value]) => {

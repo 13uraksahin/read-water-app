@@ -9,6 +9,7 @@ definePageMeta({
 
 const api = useApi()
 const toast = useToast()
+const appStore = useAppStore()
 
 // State
 const meters = ref<Meter[]>([])
@@ -67,6 +68,12 @@ onMounted(() => {
 
 // Watch for filter changes
 watch([searchQuery, statusFilter], () => {
+  pagination.value.page = 1
+  fetchMeters()
+})
+
+// Watch for tenant changes and refetch
+watch(() => appStore.activeTenantId, () => {
   pagination.value.page = 1
   fetchMeters()
 })

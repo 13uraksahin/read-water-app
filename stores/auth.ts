@@ -66,8 +66,8 @@ export const useAuthStore = defineStore('auth', {
       this.error = null
       
       try {
-        const config = useRuntimeConfig()
-        const response = await $fetch<AuthResponse>(`${config.public.apiBase}/api/v1/auth/login`, {
+        const apiBase = useApiUrl()
+        const response = await $fetch<AuthResponse>(`${apiBase}/api/v1/auth/login`, {
           method: 'POST',
           body: credentials,
         })
@@ -112,8 +112,8 @@ export const useAuthStore = defineStore('auth', {
       if (!this.refreshToken) return false
       
       try {
-        const config = useRuntimeConfig()
-        const response = await $fetch<AuthResponse>(`${config.public.apiBase}/api/v1/auth/refresh`, {
+        const apiBase = useApiUrl()
+        const response = await $fetch<AuthResponse>(`${apiBase}/api/v1/auth/refresh`, {
           method: 'POST',
           body: { refreshToken: this.refreshToken },
         })
@@ -137,8 +137,8 @@ export const useAuthStore = defineStore('auth', {
       if (!this.accessToken) return false
       
       try {
-        const config = useRuntimeConfig()
-        const user = await $fetch<User>(`${config.public.apiBase}/api/v1/auth/me`, {
+        const apiBase = useApiUrl()
+        const user = await $fetch<User>(`${apiBase}/api/v1/auth/me`, {
           headers: {
             Authorization: `Bearer ${this.accessToken}`,
           },

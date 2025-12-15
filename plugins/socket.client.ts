@@ -15,12 +15,18 @@ export default defineNuxtPlugin(() => {
   let connectionAttempts = 0
   const maxRetries = 5
   
-  // Determine socket URL based on tunnel configuration
+  // Determine socket URL based on current environment (auto-detect)
   const getSocketUrl = () => {
-    // If useTunnel is enabled, use the tunnel API URL
-    if (config.public.useTunnel) {
+    // On client-side, auto-detect based on current hostname
+    const hostname = window.location.hostname
+    const isSecure = window.location.protocol === 'https:'
+    
+    // If accessing via tunnel domain or HTTPS, use tunnel API URL for socket
+    if (hostname.includes('portall.com.tr') || isSecure) {
       return config.public.tunnelApiUrl || 'https://read-water-api.portall.com.tr'
     }
+    
+    // Otherwise use localhost
     return config.public.socketUrl
   }
   

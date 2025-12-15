@@ -589,6 +589,9 @@ const handleEditSuccess = () => {
         </UiCard>
       </div>
       
+      <!-- Consumption Chart -->
+      <MetersConsumptionChart :meter-id="meterId" />
+      
       <!-- Reading History -->
       <UiCard>
         <UiCardHeader>

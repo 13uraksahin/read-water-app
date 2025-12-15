@@ -20,6 +20,9 @@
     "test:meters": "playwright test assets.spec.ts",
     "test:customers": "playwright test customers.spec.ts",
     "test:realtime": "playwright test realtime.spec.ts",
+    "test:isolation": "playwright test tenant-isolation.spec.ts",
+    "test:isolation:headed": "playwright test tenant-isolation.spec.ts --headed",
+    "test:isolation:debug": "playwright test tenant-isolation.spec.ts --debug",
     "test:report": "playwright show-report"
   },
   "dependencies": {

@@ -91,8 +91,8 @@ export const useAppStore = defineStore('app', {
       if (!authStore.accessToken) return
       
       try {
-        const config = useRuntimeConfig()
-        const response = await $fetch<{ data: Tenant[] }>(`${config.public.apiBase}/api/v1/tenants`, {
+        const apiBase = useApiUrl()
+        const response = await $fetch<{ data: Tenant[] }>(`${apiBase}/api/v1/tenants`, {
           headers: {
             Authorization: `Bearer ${authStore.accessToken}`,
           },
@@ -114,9 +114,9 @@ export const useAppStore = defineStore('app', {
       if (!authStore.accessToken) return
       
       try {
-        const config = useRuntimeConfig()
+        const apiBase = useApiUrl()
         const params = this.activeTenantId ? `?tenantId=${this.activeTenantId}` : ''
-        const stats = await $fetch<DashboardStats>(`${config.public.apiBase}/api/v1/dashboard/stats${params}`, {
+        const stats = await $fetch<DashboardStats>(`${apiBase}/api/v1/dashboard/stats${params}`, {
           headers: {
             Authorization: `Bearer ${authStore.accessToken}`,
           },

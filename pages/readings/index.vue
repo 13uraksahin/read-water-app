@@ -7,6 +7,7 @@ definePageMeta({
 })
 
 const readingsStore = useReadingsStore()
+const appStore = useAppStore()
 const { $socket } = useNuxtApp()
 
 // Connection status
@@ -25,6 +26,11 @@ onMounted(() => {
   if ($socket) {
     isConnected.value = $socket.connected
   }
+})
+
+// Watch for tenant changes and refetch
+watch(() => appStore.activeTenantId, () => {
+  readingsStore.fetchReadings()
 })
 
 // Combined readings (live + historical)
