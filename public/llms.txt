@@ -1,0 +1,105 @@
+# Read Water - Frontend Architecture (Nuxt 4)
+
+## Project Overview
+This is the frontend application for the Read Water IoT platform.
+- Framework: Nuxt 4 (Vue 3.5+)
+- UI Library: Shadcn/UI + TailwindCSS
+- State Management: Pinia
+- Realtime: Socket.IO Client
+- Map: Leaflet
+
+## Key Directories
+- /pages: Application routes (File-based routing)
+- /components: Reusable Vue components (Auto-imported)
+- /stores: Pinia state stores (Auth, Device, Meter, Dashboard)
+- /layouts: Page layouts (Default, Auth)
+- /composables: Shared logic (useApi, useAuth)
+
+## Architecture Rules
+1. Asset & Device Decoupling: Meters (Assets) and Devices (Inventory) are separate entities.
+2. API Communication: All requests go through 'useApi' composable via Proxy.
+3. Strict Typing: All DTOs must allow interfaces defined in /types.
+
+
+## Project Structure Map
+
+### Pages (Routes)
+- pages/index.vue
+- pages/login.vue
+- pages/alarms/index.vue
+- pages/customers/[id].vue
+- pages/customers/index.vue
+- pages/decoders/index.vue
+- pages/devices/[id].vue
+- pages/devices/index.vue
+- pages/meters/[id].vue
+- pages/meters/index.vue
+- pages/profiles/[id].vue
+- pages/profiles/index.vue
+- pages/readings/index.vue
+- pages/settings/index.vue
+- pages/iam/tenants/[id].vue
+- pages/iam/tenants/index.vue
+- pages/iam/users/[id].vue
+- pages/iam/users/index.vue
+- pages/profiles/device/[id].vue
+
+### Stores (State)
+- stores/app.ts
+- stores/auth.ts
+- stores/dashboard.ts
+- stores/devices.ts
+- stores/readings.ts
+
+### Composables (Logic)
+- composables/useApi.ts
+- composables/useApiUrl.ts
+- composables/useAuthInit.ts
+- composables/useToast.ts
+
+### Components (UI)
+- components/customers/CreateForm.vue
+- components/dashboard/Alarms.vue
+- components/dashboard/Chart.vue
+- components/dashboard/Map.vue
+- components/devices/CreateForm.vue
+- components/devices/MessagesTable.vue
+- components/layout/Header.vue
+- components/layout/Sidebar.vue
+- components/layout/Toast.vue
+- components/meters/ConsumptionChart.vue
+- components/meters/CreateForm.vue
+- components/profiles/CreateForm.vue
+- components/profiles/DeviceCreateForm.vue
+- components/tenants/CreateForm.vue
+- components/ui/Avatar.vue
+- components/ui/Badge.vue
+- components/ui/Button.vue
+- components/ui/Card.vue
+- components/ui/CardContent.vue
+- components/ui/CardDescription.vue
+- components/ui/CardFooter.vue
+- components/ui/CardHeader.vue
+- components/ui/CardTitle.vue
+- components/ui/Dialog.vue
+- components/ui/Input.vue
+- components/ui/Label.vue
+- components/ui/Select.vue
+- components/ui/Skeleton.vue
+- components/ui/Spinner.vue
+- components/ui/Table.vue
+- components/ui/TableBody.vue
+- components/ui/TableCell.vue
+- components/ui/TableHead.vue
+- components/ui/TableHeader.vue
+- components/ui/TableRow.vue
+- components/users/CreateForm.vue
+
+
+### Types & Interfaces
+- types/index.ts
+
+## Developer Guide for AI
+- When fixing UI bugs, check 'pages' first, then 'components'.
+- When fixing logic bugs, check 'stores' and 'composables'.
+- Use 'useApi' for all backend calls. Do not use 'fetch' directly.

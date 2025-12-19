@@ -4,7 +4,12 @@
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
-  devtools: { enabled: true },
+  devtools: {
+    enabled: true,
+    timeline: {
+      enabled: true,
+    }
+  },
 
   // App configuration
   app: {
@@ -95,7 +100,8 @@ export default defineNuxtConfig({
   // TypeScript configuration
   typescript: {
     strict: true,
-    typeCheck: false,
+    typeCheck: false, // Disabled due to vite-plugin-checker issue with vue-tsc
+    shim: false
   },
 
   // CSS
@@ -118,15 +124,18 @@ export default defineNuxtConfig({
         'localhost',
         '.portall.com.tr', // Allow all subdomains
       ],
-      // HMR Configuration: Auto-detect based on page URL
-      // This allows BOTH localhost and tunnel access to work simultaneously:
-      // - localhost:3000 -> ws://localhost:3000/_nuxt/
-      // - tunnel.com:443 -> wss://tunnel.com:443/_nuxt/
-      hmr: {
-        // Don't set protocol - auto-detect from page (http->ws, https->wss)
-        // Don't set host - auto-detect from page hostname
-        // Don't set clientPort - auto-detect from page port (defaults to protocol default)
+      // HMR Configuration for tunnel access
+      // When USE_TUNNEL is set, disable HMR to avoid WebSocket issues through Cloudflare
+      hmr: process.env.NUXT_PUBLIC_USE_TUNNEL === 'true' ? false : {
         overlay: true,
+      },
+      // Add proper headers for CORS and caching
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        // Disable caching in dev to prevent stale module issues
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     },
   },
@@ -135,4 +144,13 @@ export default defineNuxtConfig({
   devServer: {
     host: '0.0.0.0', // Listen on all network interfaces
   },
+
+  sourcemap: {
+    server: true,
+    client: true
+  },
+
+  future: {
+    compatibilityVersion: 4
+  }
 })

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
+    "build:ai": "npx ts-node scripts/generate-llms-txt.ts",
     "dev": "nuxt dev",
     "dev:tunnel": "NUXT_PUBLIC_USE_TUNNEL=true NUXT_PUBLIC_API_BASE=https://read-water-api.portall.com.tr NUXT_PUBLIC_SOCKET_URL=https://read-water-api.portall.com.tr nuxt dev --host",
     "generate": "nuxt generate",
@@ -53,6 +54,8 @@
     "@types/node": "^25.0.0",
     "autoprefixer": "^10.4.22",
     "tailwindcss-animate": "^1.0.7",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.1.8"
   }
 }
