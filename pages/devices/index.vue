@@ -432,37 +432,42 @@ const handleCreateSuccess = () => {
     </UiCard>
     
     <!-- Create Device Dialog -->
-    <UiDialog
-      v-model:open="showCreateDialog"
-      title="Add New Device"
-      description="Add a communication device to your inventory"
-      class="max-w-2xl"
-    >
-      <DevicesCreateForm
-        @success="handleCreateSuccess"
-        @cancel="showCreateDialog = false"
-      />
+    <UiDialog v-model:open="showCreateDialog">
+      <UiDialogContent class="max-w-2xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Add New Device</UiDialogTitle>
+          <UiDialogDescription>Add a communication device to your inventory</UiDialogDescription>
+        </UiDialogHeader>
+        <div class="overflow-y-auto flex-1 -mx-6 px-6">
+          <DevicesCreateForm
+            @success="handleCreateSuccess"
+            @cancel="showCreateDialog = false"
+          />
+        </div>
+      </UiDialogContent>
     </UiDialog>
     
     <!-- Delete Confirmation Dialog -->
-    <UiDialog
-      v-model:open="showDeleteConfirm"
-      title="Delete Device"
-      description="Are you sure you want to delete this device?"
-    >
-      <div class="space-y-4">
-        <p class="text-muted-foreground">
-          This action cannot be undone. The device "{{ deviceToDelete?.serialNumber }}" will be permanently removed from your inventory.
-        </p>
-        <div class="flex justify-end gap-3">
-          <UiButton variant="outline" @click="showDeleteConfirm = false">
-            Cancel
-          </UiButton>
-          <UiButton variant="destructive" @click="confirmDelete">
-            Delete
-          </UiButton>
+    <UiDialog v-model:open="showDeleteConfirm">
+      <UiDialogContent>
+        <UiDialogHeader>
+          <UiDialogTitle>Delete Device</UiDialogTitle>
+          <UiDialogDescription>Are you sure you want to delete this device?</UiDialogDescription>
+        </UiDialogHeader>
+        <div class="space-y-4">
+          <p class="text-muted-foreground">
+            This action cannot be undone. The device "{{ deviceToDelete?.serialNumber }}" will be permanently removed from your inventory.
+          </p>
+          <div class="flex justify-end gap-3">
+            <UiButton variant="outline" @click="showDeleteConfirm = false">
+              Cancel
+            </UiButton>
+            <UiButton variant="destructive" @click="confirmDelete">
+              Delete
+            </UiButton>
+          </div>
         </div>
-      </div>
+      </UiDialogContent>
     </UiDialog>
   </div>
 </template>

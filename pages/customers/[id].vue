@@ -449,14 +449,21 @@ const handleEditSuccess = () => {
     </template>
     
     <!-- Edit Dialog -->
-    <UiDialog v-model:open="showEditDialog" title="Edit Customer" class="max-w-2xl">
-      <CustomersCreateForm
-        v-if="customer"
-        :customer="customer"
-        mode="edit"
-        @success="handleEditSuccess"
-        @cancel="showEditDialog = false"
-      />
+    <UiDialog v-model:open="showEditDialog">
+      <UiDialogContent class="max-w-2xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Edit Customer</UiDialogTitle>
+        </UiDialogHeader>
+        <div class="overflow-y-auto flex-1 -mx-6 px-6">
+          <CustomersCreateForm
+            v-if="customer"
+            :customer="customer"
+            mode="edit"
+            @success="handleEditSuccess"
+            @cancel="showEditDialog = false"
+          />
+        </div>
+      </UiDialogContent>
     </UiDialog>
   </div>
 </template>

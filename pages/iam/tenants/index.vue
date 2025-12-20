@@ -215,11 +215,18 @@ watch(searchQuery, () => {
     </UiCard>
     
     <!-- Create Dialog -->
-    <UiDialog v-model:open="showCreateDialog" title="Add Tenant" class="max-w-2xl">
-      <TenantsCreateForm
-        @success="showCreateDialog = false; fetchTenants()"
-        @cancel="showCreateDialog = false"
-      />
+    <UiDialog v-model:open="showCreateDialog">
+      <UiDialogContent class="max-w-2xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Add Tenant</UiDialogTitle>
+        </UiDialogHeader>
+        <div class="overflow-y-auto flex-1 -mx-6 px-6">
+          <TenantsCreateForm
+            @success="showCreateDialog = false; fetchTenants()"
+            @cancel="showCreateDialog = false"
+          />
+        </div>
+      </UiDialogContent>
     </UiDialog>
   </div>
 </template>

@@ -657,18 +657,29 @@ const handleEditSuccess = () => {
     </template>
     
     <!-- Edit Dialog -->
-    <UiDialog v-model:open="showEditDialog" title="Edit Meter" class="max-w-2xl">
-      <MetersCreateForm
-        v-if="meter"
-        :meter="meter"
-        mode="edit"
-        @success="handleEditSuccess"
-        @cancel="showEditDialog = false"
-      />
+    <UiDialog v-model:open="showEditDialog">
+      <UiDialogContent class="max-w-2xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Edit Meter</UiDialogTitle>
+        </UiDialogHeader>
+        <div class="overflow-y-auto flex-1 -mx-6 px-6">
+          <MetersCreateForm
+            v-if="meter"
+            :meter="meter"
+            mode="edit"
+            @success="handleEditSuccess"
+            @cancel="showEditDialog = false"
+          />
+        </div>
+      </UiDialogContent>
     </UiDialog>
     
     <!-- Link Device Dialog -->
-    <UiDialog v-model:open="showLinkDialog" title="Link Device" class="max-w-2xl">
+    <UiDialog v-model:open="showLinkDialog">
+      <UiDialogContent class="max-w-2xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Link Device</UiDialogTitle>
+        </UiDialogHeader>
       <div class="space-y-6">
         <!-- Mode Selection -->
         <div class="grid grid-cols-2 gap-4">
@@ -766,26 +777,32 @@ const handleEditSuccess = () => {
           </UiButton>
         </div>
       </div>
+      </UiDialogContent>
     </UiDialog>
     
     <!-- Unlink Confirmation Dialog -->
-    <UiDialog v-model:open="showUnlinkConfirm" title="Unlink Device">
-      <div class="space-y-4">
-        <p class="text-muted-foreground">
-          Are you sure you want to unlink the device "{{ meter?.activeDevice?.serialNumber }}" from this meter?
-        </p>
-        <p class="text-sm text-muted-foreground">
-          The device will be moved back to Warehouse status and can be linked to another meter.
-        </p>
-        <div class="flex justify-end gap-3">
-          <UiButton variant="outline" @click="showUnlinkConfirm = false">
-            Cancel
-          </UiButton>
-          <UiButton variant="destructive" :loading="isUnlinking" @click="handleUnlinkDevice">
-            Unlink Device
-          </UiButton>
+    <UiDialog v-model:open="showUnlinkConfirm">
+      <UiDialogContent>
+        <UiDialogHeader>
+          <UiDialogTitle>Unlink Device</UiDialogTitle>
+        </UiDialogHeader>
+        <div class="space-y-4">
+          <p class="text-muted-foreground">
+            Are you sure you want to unlink the device "{{ meter?.activeDevice?.serialNumber }}" from this meter?
+          </p>
+          <p class="text-sm text-muted-foreground">
+            The device will be moved back to Warehouse status and can be linked to another meter.
+          </p>
+          <div class="flex justify-end gap-3">
+            <UiButton variant="outline" @click="showUnlinkConfirm = false">
+              Cancel
+            </UiButton>
+            <UiButton variant="destructive" :loading="isUnlinking" @click="handleUnlinkDevice">
+              Unlink Device
+            </UiButton>
+          </div>
         </div>
-      </div>
+      </UiDialogContent>
     </UiDialog>
   </div>
 </template>

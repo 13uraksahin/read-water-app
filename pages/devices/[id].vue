@@ -456,54 +456,71 @@ onMounted(() => {
     </template>
     
     <!-- Edit Dialog -->
-    <UiDialog v-model:open="showEditDialog" title="Edit Device" class="max-w-2xl">
-      <DevicesCreateForm
-        v-if="device"
-        :device="device"
-        mode="edit"
-        @success="handleEditSuccess"
-        @cancel="showEditDialog = false"
-      />
+    <UiDialog v-model:open="showEditDialog">
+      <UiDialogContent class="max-w-2xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Edit Device</UiDialogTitle>
+        </UiDialogHeader>
+        <div class="overflow-y-auto flex-1 -mx-6 px-6">
+          <DevicesCreateForm
+            v-if="device"
+            :device="device"
+            mode="edit"
+            @success="handleEditSuccess"
+            @cancel="showEditDialog = false"
+          />
+        </div>
+      </UiDialogContent>
     </UiDialog>
     
     <!-- Unlink Confirmation Dialog -->
-    <UiDialog v-model:open="showUnlinkConfirm" title="Unlink Device">
-      <div class="space-y-4">
-        <p class="text-muted-foreground">
-          Are you sure you want to unlink this device from the meter "{{ device?.meter?.serialNumber }}"?
-        </p>
-        <p class="text-sm text-muted-foreground">
-          The device will be moved back to Warehouse status and can be linked to another meter.
-        </p>
-        <div class="flex justify-end gap-3">
-          <UiButton variant="outline" @click="showUnlinkConfirm = false">
-            Cancel
-          </UiButton>
-          <UiButton variant="destructive" @click="handleUnlink">
-            Unlink Device
-          </UiButton>
+    <UiDialog v-model:open="showUnlinkConfirm">
+      <UiDialogContent>
+        <UiDialogHeader>
+          <UiDialogTitle>Unlink Device</UiDialogTitle>
+        </UiDialogHeader>
+        <div class="space-y-4">
+          <p class="text-muted-foreground">
+            Are you sure you want to unlink this device from the meter "{{ device?.meter?.serialNumber }}"?
+          </p>
+          <p class="text-sm text-muted-foreground">
+            The device will be moved back to Warehouse status and can be linked to another meter.
+          </p>
+          <div class="flex justify-end gap-3">
+            <UiButton variant="outline" @click="showUnlinkConfirm = false">
+              Cancel
+            </UiButton>
+            <UiButton variant="destructive" @click="handleUnlink">
+              Unlink Device
+            </UiButton>
+          </div>
         </div>
-      </div>
+      </UiDialogContent>
     </UiDialog>
     
     <!-- Delete Confirmation Dialog -->
-    <UiDialog v-model:open="showDeleteConfirm" title="Delete Device">
-      <div class="space-y-4">
-        <p class="text-muted-foreground">
-          Are you sure you want to delete this device "{{ device?.serialNumber }}"?
-        </p>
-        <p class="text-sm text-muted-foreground">
-          This action cannot be undone.
-        </p>
-        <div class="flex justify-end gap-3">
-          <UiButton variant="outline" @click="showDeleteConfirm = false">
-            Cancel
-          </UiButton>
-          <UiButton variant="destructive" @click="handleDelete">
-            Delete Device
-          </UiButton>
+    <UiDialog v-model:open="showDeleteConfirm">
+      <UiDialogContent>
+        <UiDialogHeader>
+          <UiDialogTitle>Delete Device</UiDialogTitle>
+        </UiDialogHeader>
+        <div class="space-y-4">
+          <p class="text-muted-foreground">
+            Are you sure you want to delete this device "{{ device?.serialNumber }}"?
+          </p>
+          <p class="text-sm text-muted-foreground">
+            This action cannot be undone.
+          </p>
+          <div class="flex justify-end gap-3">
+            <UiButton variant="outline" @click="showDeleteConfirm = false">
+              Cancel
+            </UiButton>
+            <UiButton variant="destructive" @click="handleDelete">
+              Delete Device
+            </UiButton>
+          </div>
         </div>
-      </div>
+      </UiDialogContent>
     </UiDialog>
   </div>
 </template>

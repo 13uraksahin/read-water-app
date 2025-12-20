@@ -36,7 +36,14 @@ export default defineNuxtConfig({
     '@nuxtjs/color-mode',
     '@vueuse/nuxt',
     '@nuxtjs/i18n',
+    'shadcn-nuxt',
   ],
+
+  // Shadcn-vue configuration
+  shadcn: {
+    prefix: 'Ui',
+    componentDir: './components/ui',
+  },
 
   // I18n configuration
   i18n: {

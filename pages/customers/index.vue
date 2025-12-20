@@ -218,8 +218,15 @@ const getCustomerId = (customer: Customer): string => {
     </UiCard>
     
     <!-- Create Dialog -->
-    <UiDialog v-model:open="showCreateDialog" title="Add New Customer" class="max-w-2xl">
-      <CustomersCreateForm @success="showCreateDialog = false; fetchCustomers()" @cancel="showCreateDialog = false" />
+    <UiDialog v-model:open="showCreateDialog">
+      <UiDialogContent class="max-w-2xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Add New Customer</UiDialogTitle>
+        </UiDialogHeader>
+        <div class="overflow-y-auto flex-1 -mx-6 px-6">
+          <CustomersCreateForm @success="showCreateDialog = false; fetchCustomers()" @cancel="showCreateDialog = false" />
+        </div>
+      </UiDialogContent>
     </UiDialog>
   </div>
 </template>

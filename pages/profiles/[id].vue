@@ -302,14 +302,21 @@ const handleEditSuccess = () => {
     </template>
     
     <!-- Edit Dialog -->
-    <UiDialog v-model:open="showEditDialog" title="Edit Profile" class="max-w-3xl">
-      <ProfilesCreateForm
-        v-if="profile"
-        :profile="profile"
-        mode="edit"
-        @success="handleEditSuccess"
-        @cancel="showEditDialog = false"
-      />
+    <UiDialog v-model:open="showEditDialog">
+      <UiDialogContent class="max-w-3xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Edit Profile</UiDialogTitle>
+        </UiDialogHeader>
+        <div class="overflow-y-auto flex-1 -mx-6 px-6">
+          <ProfilesCreateForm
+            v-if="profile"
+            :profile="profile"
+            mode="edit"
+            @success="handleEditSuccess"
+            @cancel="showEditDialog = false"
+          />
+        </div>
+      </UiDialogContent>
     </UiDialog>
   </div>
 </template>

@@ -245,8 +245,16 @@ const goToMeter = (id: string) => {
     </UiCard>
     
     <!-- Create Meter Dialog -->
-    <UiDialog v-model:open="showCreateDialog" title="Add New Meter" description="Create a new water meter with connectivity configuration" class="max-w-2xl">
-      <MetersCreateForm @success="showCreateDialog = false; fetchMeters()" @cancel="showCreateDialog = false" />
+    <UiDialog v-model:open="showCreateDialog">
+      <UiDialogContent class="max-w-2xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Add New Meter</UiDialogTitle>
+          <UiDialogDescription>Create a new water meter with connectivity configuration</UiDialogDescription>
+        </UiDialogHeader>
+        <div class="overflow-y-auto flex-1 -mx-6 px-6">
+          <MetersCreateForm @success="showCreateDialog = false; fetchMeters()" @cancel="showCreateDialog = false" />
+        </div>
+      </UiDialogContent>
     </UiDialog>
   </div>
 </template>

@@ -339,29 +339,35 @@ const handleDeviceCreateSuccess = () => {
     </template>
     
     <!-- Create Meter Profile Dialog -->
-    <UiDialog 
-      v-model:open="showCreateMeterDialog" 
-      title="Add Meter Profile" 
-      description="Create a new meter profile with technical specifications"
-      class="max-w-3xl"
-    >
-      <ProfilesCreateForm
-        @success="handleMeterCreateSuccess"
-        @cancel="showCreateMeterDialog = false"
-      />
+    <UiDialog v-model:open="showCreateMeterDialog">
+      <UiDialogContent class="max-w-3xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Add Meter Profile</UiDialogTitle>
+          <UiDialogDescription>Create a new meter profile with technical specifications</UiDialogDescription>
+        </UiDialogHeader>
+        <div class="overflow-y-auto flex-1 -mx-6 px-6">
+          <ProfilesCreateForm
+            @success="handleMeterCreateSuccess"
+            @cancel="showCreateMeterDialog = false"
+          />
+        </div>
+      </UiDialogContent>
     </UiDialog>
     
     <!-- Create Device Profile Dialog -->
-    <UiDialog 
-      v-model:open="showCreateDeviceDialog" 
-      title="Add Device Profile" 
-      description="Create a new device profile with communication settings and decoder"
-      class="max-w-3xl"
-    >
-      <ProfilesDeviceCreateForm
-        @success="handleDeviceCreateSuccess"
-        @cancel="showCreateDeviceDialog = false"
-      />
+    <UiDialog v-model:open="showCreateDeviceDialog">
+      <UiDialogContent class="max-w-3xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Add Device Profile</UiDialogTitle>
+          <UiDialogDescription>Create a new device profile with communication settings and decoder</UiDialogDescription>
+        </UiDialogHeader>
+        <div class="overflow-y-auto flex-1 -mx-6 px-6">
+          <ProfilesDeviceCreateForm
+            @success="handleDeviceCreateSuccess"
+            @cancel="showCreateDeviceDialog = false"
+          />
+        </div>
+      </UiDialogContent>
     </UiDialog>
   </div>
 </template>

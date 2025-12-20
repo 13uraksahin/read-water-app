@@ -216,11 +216,18 @@ const getRoleVariant = (role: string): 'default' | 'secondary' | 'destructive' |
     </UiCard>
     
     <!-- Create Dialog -->
-    <UiDialog v-model:open="showCreateDialog" title="Add User" class="max-w-2xl">
-      <UsersCreateForm
-        @success="showCreateDialog = false; fetchUsers()"
-        @cancel="showCreateDialog = false"
-      />
+    <UiDialog v-model:open="showCreateDialog">
+      <UiDialogContent class="max-w-2xl">
+        <UiDialogHeader>
+          <UiDialogTitle>Add User</UiDialogTitle>
+        </UiDialogHeader>
+        <div class="overflow-y-auto flex-1 -mx-6 px-6">
+          <UsersCreateForm
+            @success="showCreateDialog = false; fetchUsers()"
+            @cancel="showCreateDialog = false"
+          />
+        </div>
+      </UiDialogContent>
     </UiDialog>
   </div>
 </template>
