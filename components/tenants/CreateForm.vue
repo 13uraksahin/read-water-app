@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Plus, Trash2 } from 'lucide-vue-next'
-import type { Tenant, MeterProfile } from '~/types'
+import type { Tenant, MeterProfile, DeviceProfile } from '~/types'
 
 const props = defineProps<{
   tenant?: Tenant
@@ -20,6 +20,7 @@ const isLoading = ref(false)
 const isSubmitting = ref(false)
 const tenants = ref<Tenant[]>([])
 const profiles = ref<MeterProfile[]>([])
+const deviceProfiles = ref<DeviceProfile[]>([])
 
 // Subscription options
 const subscriptionStatusOptions = [
@@ -45,7 +46,7 @@ const formData = reactive({
   contactEmail: props.tenant?.contactEmail || '',
   taxId: props.tenant?.taxId || '',
   taxOffice: props.tenant?.taxOffice || '',
-  subscriptionStatus: props.tenant?.subscriptionStatus || 'ACTIVE',
+  tenantSubscriptionStatus: props.tenant?.tenantSubscriptionStatus || 'ACTIVE',
   subscriptionPlan: props.tenant?.subscriptionPlan || 'STARTER',
   latitude: props.tenant?.latitude,
   longitude: props.tenant?.longitude,
@@ -61,6 +62,7 @@ const formData = reactive({
     extraDetails: props.tenant?.address?.extraDetails || '',
   },
   allowedProfileIds: [] as string[],
+  allowedDeviceProfileIds: [] as string[],
 })
 
 // Validation errors
@@ -73,17 +75,24 @@ const isEditMode = computed(() => props.mode === 'edit')
 const fetchLookups = async () => {
   isLoading.value = true
   try {
-    const [tenantsRes, profilesRes] = await Promise.all([
+    const [tenantsRes, profilesRes, deviceProfilesRes] = await Promise.all([
       api.getList<Tenant>('/api/v1/tenants', { limit: 100 }),
       api.getList<MeterProfile>('/api/v1/profiles', { limit: 100 }),
+      api.getList<DeviceProfile>('/api/v1/device-profiles', { limit: 100 }),
     ])
     
     tenants.value = tenantsRes.data
     profiles.value = profilesRes.data
+    deviceProfiles.value = deviceProfilesRes.data
     
     // Set allowed profiles if editing
     if (props.tenant) {
-      // Would need to fetch tenant's allowed profiles from API
+      if (props.tenant.allowedProfiles) {
+        formData.allowedProfileIds = props.tenant.allowedProfiles.map(p => p.id)
+      }
+      if (props.tenant.allowedDeviceProfiles) {
+        formData.allowedDeviceProfileIds = props.tenant.allowedDeviceProfiles.map(p => p.id)
+      }
     }
   } catch (error) {
     toast.error('Failed to load form data')
@@ -128,12 +137,13 @@ const handleSubmit = async () => {
       contactEmail: formData.contactEmail || undefined,
       taxId: formData.taxId || undefined,
       taxOffice: formData.taxOffice || undefined,
-      subscriptionStatus: formData.subscriptionStatus,
+      tenantSubscriptionStatus: formData.tenantSubscriptionStatus,
       subscriptionPlan: formData.subscriptionPlan || undefined,
       latitude: formData.latitude,
       longitude: formData.longitude,
       address: formData.address,
       allowedProfileIds: formData.allowedProfileIds.length > 0 ? formData.allowedProfileIds : undefined,
+      allowedDeviceProfileIds: formData.allowedDeviceProfileIds.length > 0 ? formData.allowedDeviceProfileIds : undefined,
     }
     
     if (isEditMode.value && props.tenant) {
@@ -160,6 +170,16 @@ const toggleProfile = (profileId: string) => {
     formData.allowedProfileIds.splice(index, 1)
   } else {
     formData.allowedProfileIds.push(profileId)
+  }
+}
+
+// Toggle device profile selection
+const toggleDeviceProfile = (profileId: string) => {
+  const index = formData.allowedDeviceProfileIds.indexOf(profileId)
+  if (index > -1) {
+    formData.allowedDeviceProfileIds.splice(index, 1)
+  } else {
+    formData.allowedDeviceProfileIds.push(profileId)
   }
 }
 
@@ -207,7 +227,7 @@ onMounted(() => {
           <div>
             <UiLabel>Subscription Status</UiLabel>
             <UiSelect
-              v-model="formData.subscriptionStatus"
+              v-model="formData.tenantSubscriptionStatus"
               :options="subscriptionStatusOptions"
             />
           </div>
@@ -360,7 +380,7 @@ onMounted(() => {
         </div>
       </div>
       
-      <!-- Allowed Profiles -->
+      <!-- Allowed Meter Profiles -->
       <div class="space-y-4 pt-4 border-t border-border">
         <h3 class="font-medium text-lg">Allowed Meter Profiles</h3>
         <p class="text-sm text-muted-foreground">Select which meter profiles this tenant can use</p>
@@ -401,6 +421,50 @@ onMounted(() => {
         
         <p v-if="profiles.length === 0" class="text-sm text-muted-foreground text-center py-4">
           No meter profiles available
+        </p>
+      </div>
+      
+      <!-- Allowed Device Profiles -->
+      <div class="space-y-4 pt-4 border-t border-border">
+        <h3 class="font-medium text-lg">Allowed Device Profiles</h3>
+        <p class="text-sm text-muted-foreground">Select which device profiles this tenant can use</p>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          <button
+            v-for="profile in deviceProfiles"
+            :key="profile.id"
+            type="button"
+            class="flex items-center gap-2 p-3 rounded-lg border text-left transition-colors"
+            :class="formData.allowedDeviceProfileIds.includes(profile.id)
+              ? 'border-primary bg-primary/5'
+              : 'border-border hover:border-muted-foreground/50'"
+            @click="toggleDeviceProfile(profile.id)"
+          >
+            <div
+              class="h-4 w-4 rounded border flex items-center justify-center"
+              :class="formData.allowedDeviceProfileIds.includes(profile.id)
+                ? 'bg-primary border-primary'
+                : 'border-muted-foreground/50'"
+            >
+              <svg
+                v-if="formData.allowedDeviceProfileIds.includes(profile.id)"
+                class="h-3 w-3 text-primary-foreground"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-sm truncate">{{ profile.brand }}</p>
+              <p class="text-xs text-muted-foreground truncate">{{ profile.modelCode }} - {{ profile.communicationTechnology }}</p>
+            </div>
+          </button>
+        </div>
+        
+        <p v-if="deviceProfiles.length === 0" class="text-sm text-muted-foreground text-center py-4">
+          No device profiles available
         </p>
       </div>
       

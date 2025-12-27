@@ -50,6 +50,7 @@ const fetchUser = async () => {
         tenantName: t.tenant?.name || t.tenantName,
         tenantPath: t.tenant?.path || t.tenantPath,
         role: t.role,
+        permissions: t.permissions || [],
       }))
     }
     
@@ -60,6 +61,11 @@ const fetchUser = async () => {
   } finally {
     isLoading.value = false
   }
+}
+
+// Count permissions per tenant
+const getPermissionCount = (permissions?: string[]): number => {
+  return permissions?.length || 0
 }
 
 // Get role variant
@@ -244,8 +250,8 @@ const handleEditSuccess = () => {
       <!-- Assigned Tenants -->
       <UiCard>
         <UiCardHeader>
-          <UiCardTitle>Assigned Tenants</UiCardTitle>
-          <UiCardDescription>Tenants and roles for this user</UiCardDescription>
+          <UiCardTitle>Assigned Tenants & Permissions</UiCardTitle>
+          <UiCardDescription>Tenants, roles and permissions for this user</UiCardDescription>
         </UiCardHeader>
         <UiTable>
           <UiTableHeader>
@@ -253,12 +259,13 @@ const handleEditSuccess = () => {
               <UiTableHead>Tenant</UiTableHead>
               <UiTableHead>Path</UiTableHead>
               <UiTableHead>Role</UiTableHead>
+              <UiTableHead>Permissions</UiTableHead>
             </UiTableRow>
           </UiTableHeader>
           <UiTableBody>
             <template v-if="!user.tenants?.length">
               <UiTableRow>
-                <UiTableCell :colspan="3" class="text-center py-8 text-muted-foreground">
+                <UiTableCell :colspan="4" class="text-center py-8 text-muted-foreground">
                   <Building2 class="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>No tenants assigned</p>
                 </UiTableCell>
@@ -285,6 +292,11 @@ const handleEditSuccess = () => {
                   <UiBadge :variant="getRoleVariant(assignment.role)">
                     <Shield class="h-3 w-3 mr-1" />
                     {{ assignment.role.replace(/_/g, ' ') }}
+                  </UiBadge>
+                </UiTableCell>
+                <UiTableCell>
+                  <UiBadge variant="outline">
+                    {{ getPermissionCount(assignment.permissions) }} permissions
                   </UiBadge>
                 </UiTableCell>
               </UiTableRow>

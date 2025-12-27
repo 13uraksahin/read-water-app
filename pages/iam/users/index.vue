@@ -27,11 +27,12 @@ const pagination = ref({
 const fetchUsers = async () => {
   isLoading.value = true
   try {
+    // Skip tenant filter to show all users accessible by current user (based on tenant hierarchy)
     const response = await api.getList<any>('/api/v1/users', {
       page: pagination.value.page,
       limit: pagination.value.limit,
       search: searchQuery.value || undefined,
-    })
+    }, { skipTenantFilter: true })
     
     // Transform tenants from API format to expected format
     users.value = response.data.map((user: any) => ({
@@ -56,7 +57,7 @@ const fetchUsers = async () => {
   }
 }
 
-// Initial fetch
+// Fetch on mount (NuxtPage key ensures re-mount on navigation)
 onMounted(() => {
   fetchUsers()
 })

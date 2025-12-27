@@ -18,7 +18,7 @@ const showFilters = ref(false)
 const filterMeter = ref('')
 const filterTenant = ref('')
 
-// Fetch readings on mount
+// Fetch on mount (NuxtPage key ensures re-mount on navigation)
 onMounted(() => {
   readingsStore.fetchReadings()
   
@@ -167,7 +167,7 @@ const refreshReadings = () => {
                 </NuxtLink>
               </UiTableCell>
               <UiTableCell>
-                {{ reading.meter?.customer?.details?.firstName || 'N/A' }}
+                {{ reading.meter?.subscription?.customer?.details?.firstName || reading.meter?.subscription?.customer?.details?.organizationName || 'N/A' }}
               </UiTableCell>
               <UiTableCell class="font-mono">
                 {{ formatWaterUsage(reading.value, reading.unit) }}

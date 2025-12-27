@@ -4,7 +4,7 @@ import {
   MeterStatus,
   DeviceStatus,
   type MeterProfile,
-  type Customer,
+  type Subscription,
   type Tenant,
   type Device,
   type DeviceProfile,
@@ -29,23 +29,23 @@ const toast = useToast()
 const isLoading = ref(false)
 const isSubmitting = ref(false)
 const currentStep = ref(1)
-const totalSteps = 3
+const totalSteps = 2 // Reduced steps - no address step since address is on Subscription
 
 // Computed: Is edit mode
 const isEditMode = computed(() => props.mode === 'edit')
 
 // Lookups
 const tenants = ref<Tenant[]>([])
-const customers = ref<Customer[]>([])
+const subscriptions = ref<Subscription[]>([])
 const meterProfiles = ref<MeterProfile[]>([])
 const availableDevices = ref<Device[]>([])
 const deviceProfiles = ref<DeviceProfile[]>([])
 
-// Form data
+// Form data - Updated for Subscription model
 const formData = reactive({
   // Step 1: Basic Info
   tenantId: props.meter?.tenantId || '',
-  customerId: props.meter?.customerId || '',
+  subscriptionId: props.meter?.subscriptionId || '',
   meterProfileId: props.meter?.meterProfileId || '',
   serialNumber: props.meter?.serialNumber || '',
   initialIndex: props.meter?.initialIndex || 0,
@@ -54,23 +54,7 @@ const formData = reactive({
     ? new Date(props.meter.installationDate).toISOString().slice(0, 16) 
     : new Date().toISOString().slice(0, 16),
   
-  // Step 2: Location
-  latitude: props.meter?.latitude,
-  longitude: props.meter?.longitude,
-  addressCode: props.meter?.addressCode || '',
-  address: {
-    city: props.meter?.address?.city || '',
-    district: props.meter?.address?.district || '',
-    neighborhood: props.meter?.address?.neighborhood || '',
-    street: props.meter?.address?.street || '',
-    buildingNo: props.meter?.address?.buildingNo || '',
-    floor: props.meter?.address?.floor || '',
-    doorNo: props.meter?.address?.doorNo || '',
-    postalCode: props.meter?.address?.postalCode || '',
-    extraDetails: props.meter?.address?.extraDetails || '',
-  },
-  
-  // Step 3: Device Configuration
+  // Step 2: Device Configuration
   deviceOption: 'none' as 'none' | 'select' | 'create',
   selectedDeviceId: props.meter?.activeDeviceId || '',
   // For inline device creation
@@ -97,6 +81,11 @@ const deviceOptions = [
 // Selected meter profile
 const selectedMeterProfile = computed(() => {
   return meterProfiles.value.find(p => p.id === formData.meterProfileId)
+})
+
+// Selected subscription
+const selectedSubscription = computed(() => {
+  return subscriptions.value.find(s => s.id === formData.subscriptionId)
 })
 
 // Selected device profile for new device
@@ -147,9 +136,9 @@ const fetchLookups = async () => {
       formData.tenantId = tenants.value[0].id
     }
     
-    // If editing and tenant is set, fetch customers
+    // If editing and tenant is set, fetch subscriptions
     if (isEditMode.value && formData.tenantId) {
-      await fetchCustomers()
+      await fetchSubscriptions()
     }
   } catch (error) {
     toast.error('Failed to load form data')
@@ -158,21 +147,21 @@ const fetchLookups = async () => {
   }
 }
 
-// Fetch customers when tenant changes
-const fetchCustomers = async () => {
+// Fetch subscriptions when tenant changes
+const fetchSubscriptions = async () => {
   if (!formData.tenantId) {
-    customers.value = []
+    subscriptions.value = []
     return
   }
   
   try {
-    const response = await api.getList<Customer>('/api/v1/customers', { 
+    const response = await api.getList<Subscription>('/api/v1/subscriptions', { 
       tenantId: formData.tenantId, 
       limit: 100 
     })
-    customers.value = response.data
+    subscriptions.value = response.data
   } catch (error) {
-    console.error('Failed to fetch customers:', error)
+    console.error('Failed to fetch subscriptions:', error)
   }
 }
 
@@ -206,7 +195,7 @@ const fetchAvailableDevices = async () => {
 
 // Watch tenant and profile changes
 watch(() => formData.tenantId, () => {
-  fetchCustomers()
+  fetchSubscriptions()
   if (formData.meterProfileId) {
     fetchAvailableDevices()
   }
@@ -228,6 +217,17 @@ const getDeviceIdentifier = (device: Device): string => {
   return device.serialNumber
 }
 
+// Get subscription display name
+const getSubscriptionLabel = (sub: Subscription): string => {
+  const customerName = sub.customer?.details?.firstName 
+    ? `${sub.customer.details.firstName} ${sub.customer.details.lastName || ''}`
+    : sub.customer?.details?.organizationName || 'N/A'
+  const address = sub.address?.city 
+    ? `${sub.address.city}, ${sub.address.district || ''}`
+    : ''
+  return `${customerName} - ${address || 'No address'}`
+}
+
 // Validate current step
 const validateStep = (step: number): boolean => {
   Object.keys(errors).forEach(key => delete errors[key])
@@ -235,13 +235,13 @@ const validateStep = (step: number): boolean => {
   if (step === 1) {
     // Only validate create-only fields when not in edit mode
     if (!isEditMode.value && !formData.tenantId) errors.tenantId = 'Tenant is required'
-    if (!formData.customerId) errors.customerId = 'Customer is required'
+    // Subscription is OPTIONAL - meters can be created without subscription (warehouse stock)
     if (!formData.meterProfileId) errors.meterProfileId = 'Meter profile is required'
     if (!formData.serialNumber) errors.serialNumber = 'Serial number is required'
     if (!formData.status) errors.status = 'Status is required'
   }
   
-  if (step === 3 && formData.deviceOption === 'create') {
+  if (step === 2 && formData.deviceOption === 'create') {
     if (!formData.newDevice.deviceProfileId) {
       errors.newDeviceProfile = 'Device profile is required'
     }
@@ -281,7 +281,7 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
-    // Build meter payload - exclude read-only fields in edit mode
+    // Build meter payload - updated for Subscription model
     const meterPayload = {
       // Fields only allowed on create
       ...(isEditMode.value ? {} : {
@@ -290,14 +290,11 @@ const handleSubmit = async () => {
         installationDate: formData.installationDate,
       }),
       // Fields allowed on both create and update
-      customerId: formData.customerId,
+      // Only include subscriptionId if it's set (optional)
+      ...(formData.subscriptionId ? { subscriptionId: formData.subscriptionId } : {}),
       meterProfileId: formData.meterProfileId,
       serialNumber: formData.serialNumber,
       status: formData.status,
-      latitude: formData.latitude,
-      longitude: formData.longitude,
-      addressCode: formData.addressCode || undefined,
-      address: formData.address,
     }
     
     let meterId: string
@@ -403,20 +400,24 @@ onMounted(() => {
           </div>
           
           <div>
-            <UiLabel :error="!!errors.customerId">Customer *</UiLabel>
+            <UiLabel :error="!!errors.subscriptionId">Subscription (Service Point)</UiLabel>
             <UiSelect
-              v-model="formData.customerId"
-              :options="customers.map(c => ({ 
-                label: c.details?.firstName 
-                  ? `${c.details.firstName} ${c.details.lastName || ''}`
-                  : c.details?.organizationName || 'N/A', 
-                value: c.id 
-              }))"
-              placeholder="Select customer"
-              :error="!!errors.customerId"
+              v-model="formData.subscriptionId"
+              :options="[
+                { label: '-- No Subscription (Warehouse Stock) --', value: '' },
+                ...subscriptions.map(s => ({ 
+                  label: getSubscriptionLabel(s), 
+                  value: s.id 
+                }))
+              ]"
+              placeholder="Select subscription (optional)"
+              :error="!!errors.subscriptionId"
               :disabled="!formData.tenantId"
             />
-            <p v-if="errors.customerId" class="text-xs text-destructive mt-1">{{ errors.customerId }}</p>
+            <p v-if="errors.subscriptionId" class="text-xs text-destructive mt-1">{{ errors.subscriptionId }}</p>
+            <p v-else class="text-xs text-muted-foreground mt-1">
+              Optional. Leave empty to add meter to warehouse inventory.
+            </p>
           </div>
           
           <div>
@@ -488,60 +489,31 @@ onMounted(() => {
             <span>IP: {{ selectedMeterProfile.ipRating }}</span>
           </div>
         </div>
-      </div>
-      
-      <!-- Step 2: Location -->
-      <div v-show="currentStep === 2" class="space-y-4">
-        <h3 class="font-medium text-lg">Location</h3>
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <UiLabel>Latitude</UiLabel>
-            <UiInput v-model.number="formData.latitude" type="number" step="0.000001" placeholder="e.g. 39.9334" />
-          </div>
-          <div>
-            <UiLabel>Longitude</UiLabel>
-            <UiInput v-model.number="formData.longitude" type="number" step="0.000001" placeholder="e.g. 32.8597" />
-          </div>
-          <div>
-            <UiLabel>Address Code</UiLabel>
-            <UiInput v-model="formData.addressCode" placeholder="TC Address Code" />
+        <!-- Selected Subscription Info -->
+        <div v-if="selectedSubscription" class="p-4 rounded-lg bg-muted/50">
+          <p class="text-sm font-medium mb-2">Address (from Subscription)</p>
+          <div class="text-sm text-muted-foreground">
+            <p v-if="selectedSubscription.address?.city">
+              {{ selectedSubscription.address.city }}, {{ selectedSubscription.address.district }}
+            </p>
+            <p v-if="selectedSubscription.address?.street">
+              {{ selectedSubscription.address.street }} {{ selectedSubscription.address.buildingNo }}
+            </p>
           </div>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <UiLabel>City</UiLabel>
-            <UiInput v-model="formData.address.city" placeholder="City" />
-          </div>
-          <div>
-            <UiLabel>District</UiLabel>
-            <UiInput v-model="formData.address.district" placeholder="District" />
-          </div>
-          <div>
-            <UiLabel>Neighborhood</UiLabel>
-            <UiInput v-model="formData.address.neighborhood" placeholder="Neighborhood" />
-          </div>
-          <div>
-            <UiLabel>Street</UiLabel>
-            <UiInput v-model="formData.address.street" placeholder="Street" />
-          </div>
-          <div>
-            <UiLabel>Building No</UiLabel>
-            <UiInput v-model="formData.address.buildingNo" placeholder="Building No" />
-          </div>
-          <div>
-            <UiLabel>Floor / Door</UiLabel>
-            <div class="flex gap-2">
-              <UiInput v-model="formData.address.floor" placeholder="Floor" />
-              <UiInput v-model="formData.address.doorNo" placeholder="Door" />
-            </div>
-          </div>
+        <!-- No Subscription Notice -->
+        <div v-else-if="formData.tenantId && !formData.subscriptionId" class="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800">
+          <p class="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">Warehouse Stock</p>
+          <p class="text-sm text-amber-700 dark:text-amber-300">
+            This meter will be added to inventory without a service point. You can link it to a subscription later.
+          </p>
         </div>
       </div>
       
-      <!-- Step 3: Device Configuration -->
-      <div v-show="currentStep === 3" class="space-y-6">
+      <!-- Step 2: Device Configuration -->
+      <div v-show="currentStep === 2" class="space-y-6">
         <div>
           <h3 class="font-medium text-lg flex items-center gap-2">
             <Radio class="h-5 w-5" />

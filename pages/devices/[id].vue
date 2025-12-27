@@ -14,8 +14,9 @@ import {
   Settings,
   Code,
   Trash2,
+  Wifi,
 } from 'lucide-vue-next'
-import type { Device, DeviceProfile } from '~/types'
+import type { Device, DeviceProfile, DeviceCommunicationConfig } from '~/types'
 import { formatDate, formatDateTime } from '~/lib/utils'
 
 definePageMeta({
@@ -78,6 +79,37 @@ const getSignalColor = (strength?: number): string => {
   if (strength >= -70) return 'text-green-600'
   if (strength >= -90) return 'text-yellow-600'
   return 'text-red-600'
+}
+
+// Get communication configs from device profile
+const profileCommunicationConfigs = computed((): DeviceCommunicationConfig[] => {
+  if (!device.value?.deviceProfile) return []
+  
+  const profile = device.value.deviceProfile
+  
+  // Check for new format: communicationConfigs in specifications
+  const specs = profile.specifications as Record<string, unknown> | undefined
+  if (specs?.communicationConfigs && Array.isArray(specs.communicationConfigs)) {
+    return specs.communicationConfigs as DeviceCommunicationConfig[]
+  }
+  
+  // Fallback: Legacy single technology format
+  if (profile.communicationTechnology) {
+    return [{
+      technology: profile.communicationTechnology,
+      fieldDefinitions: profile.fieldDefinitions || [],
+    }]
+  }
+  
+  return []
+})
+
+// Check if profile has multiple technologies
+const hasMultipleTechnologies = computed(() => profileCommunicationConfigs.value.length > 1)
+
+// Get field value from dynamicFields
+const getFieldValue = (fieldName: string): string => {
+  return device.value?.dynamicFields?.[fieldName] || '-'
 }
 
 // Handle unlink
@@ -148,11 +180,23 @@ onMounted(() => {
             <Radio class="h-6 w-6 text-primary" />
             {{ device.serialNumber }}
           </h1>
-          <p class="text-sm text-muted-foreground">
-            {{ device.deviceProfile?.brand }} {{ device.deviceProfile?.modelCode }}
-            <span class="mx-2">•</span>
-            {{ device.deviceProfile?.communicationTechnology?.replace(/_/g, '-') }}
-          </p>
+          <div class="text-sm text-muted-foreground flex items-center flex-wrap gap-1">
+            <span>{{ device.deviceProfile?.brand }} {{ device.deviceProfile?.modelCode }}</span>
+            <span class="mx-1">•</span>
+            <span v-if="hasMultipleTechnologies" class="flex items-center gap-1">
+              <UiBadge 
+                v-for="config in profileCommunicationConfigs" 
+                :key="config.technology" 
+                variant="outline" 
+                class="text-xs"
+              >
+                {{ config.technology?.replace(/_/g, '-') }}
+              </UiBadge>
+            </span>
+            <span v-else>
+              {{ device.deviceProfile?.communicationTechnology?.replace(/_/g, '-') }}
+            </span>
+          </div>
         </template>
       </div>
       
@@ -309,8 +353,61 @@ onMounted(() => {
               </div>
             </div>
             
-            <!-- Dynamic Fields (Keys) -->
-            <div v-if="device.dynamicFields && Object.keys(device.dynamicFields).length > 0" class="mt-6 pt-6 border-t border-border">
+            <!-- Communication Keys (from Profile) -->
+            <div v-if="profileCommunicationConfigs.length > 0 && device.dynamicFields && Object.keys(device.dynamicFields).length > 0" class="mt-6 pt-6 border-t border-border">
+              <h4 class="font-medium mb-4 flex items-center gap-2">
+                <Wifi class="h-4 w-4" />
+                Communication Keys
+                <UiBadge v-if="hasMultipleTechnologies" variant="outline" class="ml-2">
+                  {{ profileCommunicationConfigs.length }} Technologies
+                </UiBadge>
+              </h4>
+              
+              <!-- Multiple technologies - grouped display -->
+              <div v-if="hasMultipleTechnologies" class="space-y-4">
+                <div
+                  v-for="config in profileCommunicationConfigs"
+                  :key="config.technology"
+                  class="rounded-lg border border-border overflow-hidden"
+                >
+                  <!-- Technology Header -->
+                  <div class="flex items-center gap-3 p-3 bg-muted/50 border-b border-border">
+                    <UiBadge variant="outline">
+                      {{ config.technology?.replace(/_/g, '-') }}
+                    </UiBadge>
+                  </div>
+                  
+                  <!-- Technology Fields -->
+                  <div class="p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div
+                        v-for="fieldDef in config.fieldDefinitions"
+                        :key="fieldDef.name"
+                        class="p-3 rounded-lg bg-muted/30"
+                      >
+                        <p class="text-xs text-muted-foreground uppercase tracking-wide">{{ fieldDef.label || fieldDef.name }}</p>
+                        <p class="font-mono text-sm break-all">{{ getFieldValue(fieldDef.name) }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Single technology - simple layout -->
+              <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                  v-for="(value, key) in device.dynamicFields"
+                  :key="key"
+                  class="p-3 rounded-lg bg-muted/50"
+                >
+                  <p class="text-xs text-muted-foreground uppercase tracking-wide">{{ key }}</p>
+                  <p class="font-mono text-sm break-all">{{ value }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Fallback: Just show dynamic fields if no profile configs -->
+            <div v-else-if="device.dynamicFields && Object.keys(device.dynamicFields).length > 0" class="mt-6 pt-6 border-t border-border">
               <h4 class="font-medium mb-4 flex items-center gap-2">
                 <Settings class="h-4 w-4" />
                 Communication Keys
@@ -366,9 +463,9 @@ onMounted(() => {
                       <span class="text-muted-foreground">Profile:</span>
                       {{ device.meter.meterProfile.brand }} {{ device.meter.meterProfile.modelCode }}
                     </p>
-                    <p v-if="device.meter.customer">
+                    <p v-if="device.meter.subscription?.customer">
                       <span class="text-muted-foreground">Customer:</span>
-                      {{ device.meter.customer.details?.firstName || device.meter.customer.details?.organizationName }}
+                      {{ device.meter.subscription.customer.details?.firstName || device.meter.subscription.customer.details?.organizationName }}
                     </p>
                     <p>
                       <span class="text-muted-foreground">Status:</span>

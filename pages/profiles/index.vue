@@ -54,7 +54,7 @@ const fetchDeviceProfiles = async () => {
   }
 }
 
-// Initial fetch
+// Fetch on mount (NuxtPage key ensures re-mount on navigation)
 onMounted(() => {
   fetchMeterProfiles()
   fetchDeviceProfiles()

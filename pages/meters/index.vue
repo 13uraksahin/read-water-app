@@ -10,6 +10,7 @@ definePageMeta({
 const api = useApi()
 const toast = useToast()
 const appStore = useAppStore()
+const { canCreate, canUpdate, canDelete, MODULES } = usePermissions()
 
 // State
 const meters = ref<Meter[]>([])
@@ -61,7 +62,7 @@ const fetchMeters = async () => {
   }
 }
 
-// Initial fetch
+// Fetch on mount (NuxtPage key ensures re-mount on navigation)
 onMounted(() => {
   fetchMeters()
 })
@@ -87,6 +88,7 @@ const getStatusVariant = (status: MeterStatus) => {
     MAINTENANCE: 'warning',
     PLANNED: 'secondary',
     DEPLOYED: 'info',
+    USED: 'secondary',
   }
   return variants[status] || 'secondary'
 }
@@ -109,10 +111,13 @@ const goToMeter = (id: string) => {
         <p class="text-muted-foreground">Manage water meters across all tenants</p>
       </div>
       
-      <UiButton @click="showCreateDialog = true">
-        <Plus class="h-4 w-4" />
-        Add Meter
-      </UiButton>
+      <!-- Only show Add Meter button if user has meter.create permission -->
+      <UiPermissionGate :module="MODULES.METERS" action="create">
+        <UiButton @click="showCreateDialog = true">
+          <Plus class="h-4 w-4" />
+          Add Meter
+        </UiButton>
+      </UiPermissionGate>
     </div>
     
     <!-- Filters -->
@@ -134,7 +139,8 @@ const goToMeter = (id: string) => {
           class="w-full sm:w-48"
         />
         
-        <UiButton variant="outline">
+        <!-- Export button only visible if user has reading.export permission -->
+        <UiButton v-permission="'reading.export'" variant="outline">
           <Download class="h-4 w-4" />
           Export
         </UiButton>
@@ -185,7 +191,7 @@ const goToMeter = (id: string) => {
                 {{ meter.serialNumber }}
               </UiTableCell>
               <UiTableCell>
-                {{ meter.customer?.details?.firstName || meter.customer?.details?.organizationName || 'N/A' }}
+                {{ meter.subscription?.customer?.details?.firstName || meter.subscription?.customer?.details?.organizationName || 'N/A' }}
               </UiTableCell>
               <UiTableCell>
                 <span v-if="meter.meterProfile">
@@ -208,8 +214,8 @@ const goToMeter = (id: string) => {
                 <span v-else class="text-muted-foreground">Never</span>
               </UiTableCell>
               <UiTableCell>
-                <span v-if="meter.latitude != null && meter.longitude != null" class="text-xs font-mono">
-                  {{ Number(meter.latitude).toFixed(4) }}, {{ Number(meter.longitude).toFixed(4) }}
+                <span v-if="meter.subscription?.latitude != null && meter.subscription?.longitude != null" class="text-xs font-mono">
+                  {{ Number(meter.subscription.latitude).toFixed(4) }}, {{ Number(meter.subscription.longitude).toFixed(4) }}
                 </span>
                 <span v-else class="text-muted-foreground">-</span>
               </UiTableCell>

@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   FileText,
 } from 'lucide-vue-next'
-import type { Tenant, User, MeterProfile } from '~/types'
+import type { Tenant, User, MeterProfile, DeviceProfile } from '~/types'
 
 definePageMeta({
   middleware: ['auth'],
@@ -31,9 +31,11 @@ const tenantId = computed(() => route.params.id as string)
 const tenant = ref<Tenant | null>(null)
 const users = ref<User[]>([])
 const allowedProfiles = ref<MeterProfile[]>([])
+const allowedDeviceProfiles = ref<DeviceProfile[]>([])
 const isLoading = ref(true)
 const isLoadingUsers = ref(true)
 const isLoadingProfiles = ref(true)
+const isLoadingDeviceProfiles = ref(true)
 const showEditDialog = ref(false)
 
 // Stats
@@ -105,6 +107,25 @@ const fetchProfiles = async () => {
   }
 }
 
+// Fetch allowed device profiles for this tenant
+const fetchDeviceProfiles = async () => {
+  isLoadingDeviceProfiles.value = true
+  try {
+    // First check if tenant object has allowedDeviceProfiles embedded
+    if (tenant.value?.allowedDeviceProfiles?.length) {
+      allowedDeviceProfiles.value = tenant.value.allowedDeviceProfiles
+      return
+    }
+    
+    allowedDeviceProfiles.value = []
+  } catch (error) {
+    console.error('Failed to fetch device profiles:', error)
+    allowedDeviceProfiles.value = []
+  } finally {
+    isLoadingDeviceProfiles.value = false
+  }
+}
+
 // Get user role for this tenant
 const getUserRole = (user: User): string => {
   const assignment = user.tenants?.find(t => t.tenantId === tenantId.value)
@@ -129,6 +150,7 @@ onMounted(async () => {
   await fetchTenant()
   fetchUsers()
   fetchProfiles()
+  fetchDeviceProfiles()
 })
 
 // Handle edit success
@@ -299,9 +321,9 @@ const handleEditSuccess = () => {
           <UiCardContent class="space-y-4">
             <div class="flex items-center justify-between">
               <span class="text-muted-foreground">Status</span>
-              <UiBadge :variant="tenant.subscriptionStatus === 'ACTIVE' ? 'success' : 'secondary'">
-                <CheckCircle2 v-if="tenant.subscriptionStatus === 'ACTIVE'" class="h-3 w-3 mr-1" />
-                {{ tenant.subscriptionStatus }}
+              <UiBadge :variant="tenant.tenantSubscriptionStatus === 'ACTIVE' ? 'success' : 'secondary'">
+                <CheckCircle2 v-if="tenant.tenantSubscriptionStatus === 'ACTIVE'" class="h-3 w-3 mr-1" />
+                {{ tenant.tenantSubscriptionStatus }}
               </UiBadge>
             </div>
             
@@ -423,6 +445,41 @@ const handleEditSuccess = () => {
             >
               <FileText class="h-3 w-3 mr-1" />
               {{ profile.brand }} {{ profile.modelCode }}
+            </UiBadge>
+          </div>
+        </UiCardContent>
+      </UiCard>
+      
+      <!-- Allowed Device Profiles -->
+      <UiCard>
+        <UiCardHeader>
+          <div class="flex items-center justify-between">
+            <div>
+              <UiCardTitle>Allowed Device Profiles</UiCardTitle>
+              <UiCardDescription>Device models this tenant can use</UiCardDescription>
+            </div>
+          </div>
+        </UiCardHeader>
+        <UiCardContent>
+          <div v-if="isLoadingDeviceProfiles" class="flex gap-2">
+            <UiSkeleton v-for="i in 4" :key="i" class="h-8 w-32" />
+          </div>
+          
+          <div v-else-if="allowedDeviceProfiles.length === 0" class="text-center py-8 text-muted-foreground">
+            <FileText class="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p>No device profiles assigned</p>
+          </div>
+          
+          <div v-else class="flex flex-wrap gap-2">
+            <UiBadge
+              v-for="profile in allowedDeviceProfiles"
+              :key="profile.id"
+              variant="secondary"
+              class="cursor-pointer hover:bg-secondary/80"
+              @click="navigateTo(`/profiles/device/${profile.id}`)"
+            >
+              <FileText class="h-3 w-3 mr-1" />
+              {{ profile.brand }} {{ profile.modelCode }} - {{ profile.communicationTechnology }}
             </UiBadge>
           </div>
         </UiCardContent>

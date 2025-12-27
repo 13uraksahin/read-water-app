@@ -89,7 +89,7 @@ const toggleExpand = (id: string) => {
   }
 }
 
-// Initial fetch
+// Fetch on mount (NuxtPage key ensures re-mount on navigation)
 onMounted(() => {
   fetchTenants()
 })
@@ -189,8 +189,8 @@ watch(searchQuery, () => {
                 {{ tenant.path }}
               </UiTableCell>
               <UiTableCell>
-                <UiBadge :variant="tenant.subscriptionStatus === 'ACTIVE' ? 'success' : 'secondary'">
-                  {{ tenant.subscriptionStatus }}
+                <UiBadge :variant="tenant.tenantSubscriptionStatus === 'ACTIVE' ? 'success' : 'secondary'">
+                  {{ tenant.tenantSubscriptionStatus }}
                 </UiBadge>
               </UiTableCell>
               <UiTableCell>

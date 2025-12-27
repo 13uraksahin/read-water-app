@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CustomerType, ConsumptionType, type Tenant, type Customer } from '~/types'
+import { CustomerType, type Tenant, type Customer } from '~/types'
 
 const props = defineProps<{
   customer?: Customer
@@ -22,11 +22,11 @@ const tenants = ref<Tenant[]>([])
 // Computed: Is edit mode
 const isEditMode = computed(() => props.mode === 'edit')
 
-// Form data
+// Form data - NO ADDRESS (address is on Subscription)
 const formData = reactive({
   tenantId: props.customer?.tenantId || '',
+  customerNumber: props.customer?.customerNumber || '',
   customerType: props.customer?.customerType || CustomerType.INDIVIDUAL,
-  consumptionType: props.customer?.consumptionType || ConsumptionType.NORMAL,
   // Individual fields
   firstName: props.customer?.details?.firstName || '',
   lastName: props.customer?.details?.lastName || '',
@@ -41,32 +41,12 @@ const formData = reactive({
   contactLastName: props.customer?.details?.contactLastName || '',
   contactPhone: props.customer?.details?.contactPhone || '',
   contactEmail: props.customer?.details?.contactEmail || '',
-  // Address
-  latitude: props.customer?.latitude,
-  longitude: props.customer?.longitude,
-  addressCode: props.customer?.addressCode || '',
-  address: {
-    city: props.customer?.address?.city || '',
-    district: props.customer?.address?.district || '',
-    neighborhood: props.customer?.address?.neighborhood || '',
-    street: props.customer?.address?.street || '',
-    buildingNo: props.customer?.address?.buildingNo || '',
-    floor: props.customer?.address?.floor || '',
-    doorNo: props.customer?.address?.doorNo || '',
-    postalCode: props.customer?.address?.postalCode || '',
-    extraDetails: props.customer?.address?.extraDetails || '',
-  },
 })
 
 // Options
 const customerTypeOptions = [
   { label: 'Individual', value: CustomerType.INDIVIDUAL },
   { label: 'Organizational', value: CustomerType.ORGANIZATIONAL },
-]
-
-const consumptionTypeOptions = [
-  { label: 'Normal Consumption', value: ConsumptionType.NORMAL },
-  { label: 'High Consumption', value: ConsumptionType.HIGH },
 ]
 
 // Computed: Is individual
@@ -114,13 +94,9 @@ const handleSubmit = async () => {
     
     const payload = {
       ...(isEditMode.value ? {} : { tenantId: formData.tenantId }),
+      customerNumber: formData.customerNumber,
       customerType: formData.customerType,
-      consumptionType: formData.consumptionType,
       details,
-      latitude: formData.latitude,
-      longitude: formData.longitude,
-      addressCode: formData.addressCode || undefined,
-      address: formData.address,
     }
     
     if (isEditMode.value && props.customer) {
@@ -168,20 +144,29 @@ onMounted(() => {
         </div>
         
         <div>
-          <UiLabel>Customer Type *</UiLabel>
-          <UiSelect
-            v-model="formData.customerType"
-            :options="customerTypeOptions"
+          <UiLabel>Customer Number *</UiLabel>
+          <UiInput 
+            v-model="formData.customerNumber" 
+            placeholder="Enter customer number" 
           />
+          <p class="text-xs text-muted-foreground mt-1">
+            User-defined unique identifier
+          </p>
         </div>
-        
-        <div class="md:col-span-2">
-          <UiLabel>Consumption Type</UiLabel>
-          <UiSelect
-            v-model="formData.consumptionType"
-            :options="consumptionTypeOptions"
-          />
-        </div>
+      </div>
+      
+      <div>
+        <UiLabel>Customer Type *</UiLabel>
+        <UiSelect
+          v-model="formData.customerType"
+          :options="customerTypeOptions"
+        />
+      </div>
+      
+      <!-- Note about address -->
+      <div class="bg-muted/50 p-4 rounded-lg text-sm text-muted-foreground">
+        <strong>Note:</strong> Address is assigned per subscription, not per customer. 
+        Create a subscription to assign a service address.
       </div>
       
       <!-- Conditional Fields: Individual -->
@@ -250,37 +235,6 @@ onMounted(() => {
         </div>
       </div>
       
-      <!-- Address -->
-      <div class="space-y-4 pt-4 border-t border-border">
-        <h3 class="font-medium">Address</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <UiLabel>City</UiLabel>
-            <UiInput v-model="formData.address.city" placeholder="City" />
-          </div>
-          <div>
-            <UiLabel>District</UiLabel>
-            <UiInput v-model="formData.address.district" placeholder="District" />
-          </div>
-          <div>
-            <UiLabel>Neighborhood</UiLabel>
-            <UiInput v-model="formData.address.neighborhood" placeholder="Neighborhood" />
-          </div>
-          <div>
-            <UiLabel>Street</UiLabel>
-            <UiInput v-model="formData.address.street" placeholder="Street" />
-          </div>
-          <div>
-            <UiLabel>Building No</UiLabel>
-            <UiInput v-model="formData.address.buildingNo" placeholder="Building No" />
-          </div>
-          <div>
-            <UiLabel>Postal Code</UiLabel>
-            <UiInput v-model="formData.address.postalCode" placeholder="Postal Code" />
-          </div>
-        </div>
-      </div>
-      
       <!-- Actions -->
       <div class="flex justify-end gap-3 pt-4 border-t border-border">
         <UiButton type="button" variant="outline" @click="emit('cancel')">
@@ -293,4 +247,3 @@ onMounted(() => {
     </template>
   </form>
 </template>
-

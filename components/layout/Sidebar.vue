@@ -17,6 +17,7 @@ import {
   Moon,
   Sun,
   Globe,
+  Bell,
 } from 'lucide-vue-next'
 import { cn } from '~/lib/utils'
 
@@ -24,60 +25,124 @@ const { t, locale, locales, setLocale } = useI18n()
 const route = useRoute()
 const colorMode = useColorMode()
 const authStore = useAuthStore()
+const { canAccessModule, MODULES } = usePermissions()
 
-// Navigation items using i18n keys
-const navItems = computed(() => [
+// Navigation item type
+interface NavItem {
+  labelKey: string
+  icon: any
+  to?: string
+  exact?: boolean
+  module?: string // Permission module to check
+  children?: {
+    labelKey: string
+    to: string
+    module?: string // Permission module for child
+  }[]
+}
+
+// Navigation items with permission modules
+const allNavItems: NavItem[] = [
   {
     labelKey: 'nav.dashboard',
     icon: LayoutDashboard,
     to: '/',
     exact: true,
+    module: MODULES.DASHBOARD,
   },
   {
     labelKey: 'nav.liveReadings',
     icon: Activity,
     to: '/readings',
+    module: MODULES.READINGS,
   },
   {
     labelKey: 'nav.customers',
     icon: Users,
     to: '/customers',
+    module: MODULES.CUSTOMERS,
+  },
+  {
+    labelKey: 'nav.subscriptions',
+    icon: FileText,
+    to: '/subscriptions',
+    module: MODULES.SUBSCRIPTIONS,
   },
   {
     labelKey: 'nav.meters',
     icon: Gauge,
     to: '/meters',
+    module: MODULES.METERS,
   },
   {
     labelKey: 'nav.devices',
     icon: Radio,
     to: '/devices',
+    module: MODULES.DEVICES,
   },
   {
     labelKey: 'nav.profiles',
     icon: FileText,
     to: '/profiles',
+    module: MODULES.PROFILES,
   },
   {
     labelKey: 'nav.decoders',
     icon: Code2,
     to: '/decoders',
+    module: MODULES.DECODERS,
+  },
+  {
+    labelKey: 'nav.alarms',
+    icon: Bell,
+    to: '/alarms',
+    module: MODULES.ALARMS,
   },
   {
     labelKey: 'nav.iam',
     icon: Building2,
     children: [
-      { labelKey: 'nav.tenants', to: '/iam/tenants' },
-      { labelKey: 'nav.users', to: '/iam/users' },
+      { labelKey: 'nav.tenants', to: '/iam/tenants', module: MODULES.TENANTS },
+      { labelKey: 'nav.users', to: '/iam/users', module: MODULES.USERS },
     ],
   },
   {
     labelKey: 'nav.settings',
     icon: Settings,
     to: '/settings',
-    roles: ['PLATFORM_ADMIN', 'TENANT_ADMIN'],
+    module: MODULES.SETTINGS,
   },
-])
+]
+
+// Filter navigation items based on permissions
+const navItems = computed(() => {
+  return allNavItems
+    .map(item => {
+      // If item has children, filter children by permissions
+      if (item.children) {
+        const visibleChildren = item.children.filter(child => {
+          if (!child.module) return true
+          return canAccessModule(child.module)
+        })
+        
+        // Only show parent if there are visible children
+        if (visibleChildren.length === 0) return null
+        
+        return {
+          ...item,
+          children: visibleChildren,
+        }
+      }
+      
+      // For regular items, check module permission
+      if (item.module && !canAccessModule(item.module)) {
+        return null
+      }
+      
+      return item
+    })
+    .filter((item): item is NavItem => item !== null)
+})
 
 // Expanded menu items
 const expandedItems = ref<string[]>(['nav.iam'])

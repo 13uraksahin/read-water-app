@@ -1,7 +1,8 @@
 // =============================================================================
 // TypeScript Type Definitions - Read Water Frontend
 // =============================================================================
-// Refactored for Asset/Device Split Architecture
+// Updated for Subscription Model Architecture
+// Tenant → Customer → Subscription → Meter → Device
 // =============================================================================
 
 // =============================================================================
@@ -24,6 +25,7 @@ export enum MeterStatus {
   MAINTENANCE = 'MAINTENANCE',
   PLANNED = 'PLANNED',
   DEPLOYED = 'DEPLOYED',
+  USED = 'USED',
 }
 
 export enum DeviceStatus {
@@ -33,6 +35,7 @@ export enum DeviceStatus {
   MAINTENANCE = 'MAINTENANCE',
   PLANNED = 'PLANNED',
   DEPLOYED = 'DEPLOYED',
+  USED = 'USED',
 }
 
 export enum ValveStatus {
@@ -50,6 +53,16 @@ export enum CustomerType {
 export enum ConsumptionType {
   NORMAL = 'NORMAL',
   HIGH = 'HIGH',
+}
+
+export enum SubscriptionType {
+  INDIVIDUAL = 'INDIVIDUAL',
+  ORGANIZATIONAL = 'ORGANIZATIONAL',
+}
+
+export enum SubscriptionGroup {
+  NORMAL_CONSUMPTION = 'NORMAL_CONSUMPTION',
+  HIGH_CONSUMPTION = 'HIGH_CONSUMPTION',
 }
 
 export enum CommunicationTechnology {
@@ -76,7 +89,7 @@ export enum CommunicationModule {
   NONE = 'NONE',
 }
 
-// Meter Brands (for meters/assets)
+// Meter Brands
 export enum Brand {
   BAYLAN = 'BAYLAN',
   MANAS = 'MANAS',
@@ -86,14 +99,21 @@ export enum Brand {
   TURKOGLU = 'TURKOGLU',
   BEREKET = 'BEREKET',
   TEKSAN = 'TEKSAN',
+  ITRON = 'ITRON',
+  IMA = 'IMA',
 }
 
-// Device Brands (for communication devices)
+// Device Brands
 export enum DeviceBrand {
   UNA = 'UNA',
   IMA = 'IMA',
   ITRON = 'ITRON',
   ZENNER = 'ZENNER',
+  MANAS = 'MANAS',
+  BAYLAN = 'BAYLAN',
+  CEM = 'CEM',
+  KLEPSAN = 'KLEPSAN',
+  INODYA = 'INODYA',
 }
 
 export enum MeterType {
@@ -135,6 +155,7 @@ export interface Address {
   floor?: string
   doorNo?: string
   postalCode?: string
+  addressCode?: string
   extraDetails?: string
 }
 
@@ -148,7 +169,42 @@ export interface User {
   isActive?: boolean
   createdAt: string
   updatedAt: string
+  tenantId?: string
+  role?: SystemRole
+  permissions?: string[] // Resolved permissions for primary tenant
   tenants?: TenantAssignment[]
+}
+
+// Module names for permissions
+export enum Module {
+  DASHBOARD = 'dashboard',
+  READINGS = 'readings',
+  SUBSCRIPTIONS = 'subscriptions',
+  CUSTOMERS = 'customers',
+  METERS = 'meters',
+  DEVICES = 'devices',
+  PROFILES = 'profiles',
+  ALARMS = 'alarms',
+  TENANTS = 'tenants',
+  USERS = 'users',
+  SETTINGS = 'settings',
+}
+
+// Permission actions
+export enum PermissionAction {
+  CREATE = 'create',
+  READ = 'read',
+  UPDATE = 'update',
+  DELETE = 'delete',
+}
+
+// Module permission structure
+export interface ModulePermissions {
+  module: Module
+  create: boolean
+  read: boolean
+  update: boolean
+  delete: boolean
 }
 
 export interface TenantAssignment {
@@ -156,6 +212,7 @@ export interface TenantAssignment {
   tenantName: string
   tenantPath: string
   role: SystemRole
+  permissions?: string[] // Format: "module:action" e.g., "meters:create", "customers:read"
 }
 
 export interface Tenant {
@@ -173,28 +230,36 @@ export interface Tenant {
   longitude?: number
   addressCode?: string
   address?: Address
-  subscriptionStatus: string
+  tenantSubscriptionStatus: string
   subscriptionPlan?: string
   isActive?: boolean
   createdAt: string
   updatedAt: string
   children?: Tenant[]
+  allowedProfiles?: MeterProfile[]
+  allowedDeviceProfiles?: DeviceProfile[]
 }
+
+// =============================================================================
+// Customer - No address (address is on Subscription)
+// =============================================================================
 
 export interface Customer {
   id: string
   tenantId: string
+  customerNumber: string
   customerType: CustomerType
-  consumptionType: ConsumptionType
+  consumptionType?: ConsumptionType
   details: CustomerDetails
-  latitude?: number
-  longitude?: number
-  addressCode?: string
-  address?: Address
   isActive?: boolean
+  metadata?: Record<string, unknown>
   createdAt: string
   updatedAt: string
-  meters?: Meter[]
+  tenant?: Tenant
+  subscriptions?: Subscription[]
+  _count?: {
+    subscriptions: number
+  }
 }
 
 export interface CustomerDetails {
@@ -215,7 +280,34 @@ export interface CustomerDetails {
 }
 
 // =============================================================================
-// NEW: Device Profile (Electronic Communication Unit Specs)
+// Subscription - The CENTRAL linking entity (has address)
+// =============================================================================
+
+export interface Subscription {
+  id: string
+  tenantId: string
+  subscriptionNumber: string
+  customerId: string
+  subscriptionType: SubscriptionType
+  subscriptionGroup: SubscriptionGroup
+  address: Address
+  addressCode?: string
+  latitude?: number
+  longitude?: number
+  isActive: boolean
+  startDate: string
+  endDate?: string
+  metadata?: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+  // Relations
+  tenant?: Tenant
+  customer?: Customer
+  meters?: Meter[]
+}
+
+// =============================================================================
+// Device Profile (Electronic Communication Unit Specs)
 // =============================================================================
 
 export interface DeviceFieldDefinition {
@@ -228,7 +320,6 @@ export interface DeviceFieldDefinition {
   description?: string
 }
 
-// Communication config for each technology in a device profile
 export interface DeviceCommunicationConfig {
   technology: CommunicationTechnology
   fieldDefinitions: DeviceFieldDefinition[]
@@ -240,10 +331,8 @@ export interface DeviceProfile {
   id: string
   brand: DeviceBrand
   modelCode: string
-  // Primary communication technology (backward compatible)
   communicationTechnology: CommunicationTechnology
   integrationType: IntegrationType
-  // Primary field definitions (for backward compatibility)
   fieldDefinitions: DeviceFieldDefinition[]
   decoderFunction?: string
   testPayload?: string
@@ -252,16 +341,14 @@ export interface DeviceProfile {
   lastTestSucceeded?: boolean
   batteryLifeMonths?: number
   specifications?: Record<string, unknown>
-  // Multiple communication technologies with their configs
   communicationConfigs?: DeviceCommunicationConfig[]
   createdAt: string
   updatedAt: string
-  // Relations
   compatibleMeterProfiles?: MeterProfile[]
 }
 
 // =============================================================================
-// NEW: Device (Physical Communication Unit - Inventory Item)
+// Device (Physical Communication Unit - Inventory Item)
 // =============================================================================
 
 export interface Device {
@@ -270,6 +357,7 @@ export interface Device {
   deviceProfileId: string
   serialNumber: string
   status: DeviceStatus
+  // Dynamic fields populated based on DeviceProfile's field definitions
   dynamicFields: Record<string, string>
   lastSignalStrength?: number
   lastBatteryLevel?: number
@@ -277,10 +365,9 @@ export interface Device {
   metadata?: Record<string, unknown>
   createdAt: string
   updatedAt: string
-  // Relations
   tenant?: Tenant
   deviceProfile?: DeviceProfile
-  meter?: Meter // Linked meter if deployed
+  meter?: Meter
 }
 
 // =============================================================================
@@ -311,7 +398,6 @@ export interface MeterProfile {
   specifications?: Record<string, unknown>
   createdAt: string
   updatedAt: string
-  // Relations
   compatibleDeviceProfiles?: DeviceProfile[]
   allowedTenants?: Tenant[]
   _count?: {
@@ -320,15 +406,15 @@ export interface MeterProfile {
 }
 
 // =============================================================================
-// Meter (Asset - Pure Physical Meter, no connectivity)
+// Meter (Asset - linked to Subscription, not Customer)
 // =============================================================================
 
 export interface Meter {
   id: string
   tenantId: string
-  customerId: string // Now required
+  subscriptionId?: string // Now linked to subscription
   meterProfileId: string
-  activeDeviceId?: string // Linked device
+  activeDeviceId?: string
   serialNumber: string
   initialIndex: number
   installationDate: string
@@ -336,18 +422,14 @@ export interface Meter {
   valveStatus: ValveStatus
   lastReadingValue?: number
   lastReadingTime?: string
-  latitude?: number
-  longitude?: number
-  addressCode?: string
-  address?: Address
   metadata?: Record<string, unknown>
   createdAt: string
   updatedAt: string
   // Relations
   tenant?: Tenant
-  customer?: Customer
+  subscription?: Subscription // Now includes customer and address
   meterProfile?: MeterProfile
-  activeDevice?: Device // The linked communication device
+  activeDevice?: Device
   readings?: Reading[]
   alarms?: Alarm[]
 }
@@ -458,19 +540,27 @@ export interface LoginForm {
   password: string
 }
 
+export interface CreateSubscriptionForm {
+  tenantId: string
+  subscriptionNumber: string
+  customerId: string
+  subscriptionType: SubscriptionType
+  subscriptionGroup?: SubscriptionGroup
+  address: Address
+  latitude?: number
+  longitude?: number
+  isActive?: boolean
+  startDate?: string
+}
+
 export interface CreateMeterForm {
   tenantId: string
-  customerId: string // Now required
   meterProfileId: string
+  subscriptionId?: string
   serialNumber: string
   initialIndex?: number
   status?: MeterStatus
   installationDate: string
-  latitude?: number
-  longitude?: number
-  addressCode?: string
-  address: Address
-  // Device configuration is now separate
 }
 
 export interface CreateDeviceForm {
@@ -478,6 +568,7 @@ export interface CreateDeviceForm {
   deviceProfileId: string
   serialNumber: string
   status?: DeviceStatus
+  // Dynamic fields populated based on DeviceProfile's field definitions
   dynamicFields: Record<string, string>
   metadata?: Record<string, unknown>
 }
@@ -492,13 +583,9 @@ export interface UnlinkDeviceForm {
 
 export interface CreateCustomerForm {
   tenantId: string
+  customerNumber: string
   customerType: CustomerType
-  consumptionType: ConsumptionType
   details: CustomerDetails
-  latitude?: number
-  longitude?: number
-  addressCode?: string
-  address?: Address
 }
 
 // =============================================================================
@@ -508,12 +595,12 @@ export interface CreateCustomerForm {
 export interface DashboardStats {
   totalMeters: number
   totalCustomers: number
+  totalSubscriptions: number
   totalReadings: number
   totalWaterUsage: number
   activeAlarms: number
   metersInMaintenance: number
   metersOffline: number
-  // New device stats
   totalDevices?: number
   devicesInWarehouse?: number
   devicesDeployed?: number
@@ -529,6 +616,7 @@ export interface MeterMapData {
   isOffline: boolean
   serialNumber: string
   customerName?: string
+  address?: Address
 }
 
 // =============================================================================

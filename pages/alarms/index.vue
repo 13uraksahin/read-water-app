@@ -143,7 +143,7 @@ watch([filterStatus, filterType], () => {
   fetchAlarms()
 })
 
-// Initial fetch
+// Fetch on mount (NuxtPage key ensures re-mount on navigation)
 onMounted(() => {
   fetchAlarms()
 })

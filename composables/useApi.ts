@@ -108,12 +108,14 @@ export const useApi = () => {
   // Endpoints that support tenant filtering via tenantId query parameter
   const TENANT_FILTERABLE_ENDPOINTS = [
     '/api/v1/customers',
+    '/api/v1/subscriptions',
     '/api/v1/meters',
     '/api/v1/devices',
     '/api/v1/readings',
     '/api/v1/alarms',
     '/api/v1/dashboard',
     '/api/v1/users',
+    '/api/v1/profiles',
   ]
   
   // Check if endpoint supports tenant filtering

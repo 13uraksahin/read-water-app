@@ -12,8 +12,9 @@ import {
   TrendingUp,
   User,
   Briefcase,
+  FileText,
 } from 'lucide-vue-next'
-import { CustomerType, type Customer, type Meter } from '~/types'
+import { CustomerType, type Customer, type Subscription } from '~/types'
 
 definePageMeta({
   middleware: ['auth'],
@@ -28,9 +29,9 @@ const customerId = computed(() => route.params.id as string)
 
 // State
 const customer = ref<Customer | null>(null)
-const meters = ref<Meter[]>([])
+const subscriptions = ref<Subscription[]>([])
 const isLoading = ref(true)
-const isLoadingMeters = ref(true)
+const isLoadingSubscriptions = ref(true)
 const showEditDialog = ref(false)
 
 // Computed: Is individual customer
@@ -60,24 +61,24 @@ const fetchCustomer = async () => {
   }
 }
 
-// Fetch customer's meters
-const fetchMeters = async () => {
-  isLoadingMeters.value = true
+// Fetch customer's subscriptions (which link to meters)
+const fetchSubscriptions = async () => {
+  isLoadingSubscriptions.value = true
   try {
-    const response = await api.getList<Meter>('/api/v1/meters', {
+    const response = await api.getList<Subscription>('/api/v1/subscriptions', {
       customerId: customerId.value,
       limit: 100,
     })
-    meters.value = response.data
+    subscriptions.value = response.data
   } catch (error) {
-    console.error('Failed to fetch meters:', error)
+    console.error('Failed to fetch subscriptions:', error)
   } finally {
-    isLoadingMeters.value = false
+    isLoadingSubscriptions.value = false
   }
 }
 
-// Format address
-const formatAddress = (address?: Customer['address']): string => {
+// Format address from subscription
+const formatAddress = (address?: Subscription['address']): string => {
   if (!address) return '-'
   const parts = [
     address.street,
@@ -90,30 +91,44 @@ const formatAddress = (address?: Customer['address']): string => {
 }
 
 // Get status variant
-const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' | 'success' => {
+const getStatusVariant = (status?: string): 'default' | 'secondary' | 'destructive' | 'outline' | 'success' => {
   switch (status) {
     case 'ACTIVE':
       return 'success'
     case 'MAINTENANCE':
+    case 'SUSPENDED':
       return 'destructive'
+    case 'CANCELLED':
+      return 'secondary'
     default:
       return 'secondary'
   }
 }
 
+// Calculate total meters count
+const totalMeters = computed(() => {
+  return subscriptions.value.reduce((sum, sub) => sum + (sub.meters?.length || 0), 0)
+})
+
 // Calculate total consumption
 const totalConsumption = computed(() => {
-  return meters.value.reduce((sum, meter) => {
-    const currentValue = Number(meter.lastReadingValue ?? meter.initialIndex ?? 0)
-    const initialValue = Number(meter.initialIndex ?? 0)
-    return sum + (currentValue - initialValue)
-  }, 0)
+  let total = 0
+  for (const sub of subscriptions.value) {
+    if (sub.meters) {
+      for (const meter of sub.meters) {
+        const currentValue = Number(meter.lastReadingValue ?? meter.initialIndex ?? 0)
+        const initialValue = Number(meter.initialIndex ?? 0)
+        total += (currentValue - initialValue)
+      }
+    }
+  }
+  return total
 })
 
 // Initial fetch
 onMounted(() => {
   fetchCustomer()
-  fetchMeters()
+  fetchSubscriptions()
 })
 
 // Handle edit success
@@ -144,6 +159,10 @@ const handleEditSuccess = () => {
             {{ customerName }}
           </h1>
           <div class="flex items-center gap-2 text-sm text-muted-foreground">
+            <UiBadge variant="secondary" class="font-mono">
+              #{{ customer.customerNumber }}
+            </UiBadge>
+            <span>•</span>
             <UiBadge variant="outline">
               {{ isIndividual ? 'Individual' : 'Organizational' }}
             </UiBadge>
@@ -188,11 +207,11 @@ const handleEditSuccess = () => {
         <UiCard class="p-4">
           <div class="flex items-center gap-3">
             <div class="p-2 rounded-lg bg-primary/10">
-              <Gauge class="h-5 w-5 text-primary" />
+              <FileText class="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p class="text-2xl font-bold">{{ meters.length }}</p>
-              <p class="text-sm text-muted-foreground">Linked Meters</p>
+              <p class="text-2xl font-bold">{{ subscriptions.length }}</p>
+              <p class="text-sm text-muted-foreground">Subscriptions</p>
             </div>
           </div>
         </UiCard>
@@ -200,11 +219,11 @@ const handleEditSuccess = () => {
         <UiCard class="p-4">
           <div class="flex items-center gap-3">
             <div class="p-2 rounded-lg bg-blue-500/10">
-              <TrendingUp class="h-5 w-5 text-blue-500" />
+              <Gauge class="h-5 w-5 text-blue-500" />
             </div>
             <div>
-              <p class="text-2xl font-bold">{{ totalConsumption.toFixed(2) }} m³</p>
-              <p class="text-sm text-muted-foreground">Total Consumption</p>
+              <p class="text-2xl font-bold">{{ totalMeters }}</p>
+              <p class="text-sm text-muted-foreground">Total Meters</p>
             </div>
           </div>
         </UiCard>
@@ -212,11 +231,11 @@ const handleEditSuccess = () => {
         <UiCard class="p-4">
           <div class="flex items-center gap-3">
             <div class="p-2 rounded-lg bg-green-500/10">
-              <Calendar class="h-5 w-5 text-green-500" />
+              <TrendingUp class="h-5 w-5 text-green-500" />
             </div>
             <div>
-              <p class="text-2xl font-bold">{{ new Date(customer.createdAt).toLocaleDateString() }}</p>
-              <p class="text-sm text-muted-foreground">Customer Since</p>
+              <p class="text-2xl font-bold">{{ totalConsumption.toFixed(2) }} m³</p>
+              <p class="text-sm text-muted-foreground">Total Consumption</p>
             </div>
           </div>
         </UiCard>
@@ -237,6 +256,11 @@ const handleEditSuccess = () => {
               <!-- Individual Fields -->
               <template v-if="isIndividual">
                 <div class="space-y-4">
+                  <div>
+                    <p class="text-sm text-muted-foreground">Customer Number</p>
+                    <p class="font-medium font-mono">{{ customer.customerNumber }}</p>
+                  </div>
+                  
                   <div>
                     <p class="text-sm text-muted-foreground">Full Name</p>
                     <p class="font-medium text-lg">
@@ -265,11 +289,28 @@ const handleEditSuccess = () => {
                     </div>
                   </div>
                 </div>
+                
+                <div class="space-y-4">
+                  <div>
+                    <p class="text-sm text-muted-foreground">Customer Since</p>
+                    <p class="font-medium">{{ new Date(customer.createdAt).toLocaleDateString() }}</p>
+                  </div>
+                  
+                  <div>
+                    <p class="text-sm text-muted-foreground">Last Updated</p>
+                    <p class="font-medium">{{ new Date(customer.updatedAt).toLocaleDateString() }}</p>
+                  </div>
+                </div>
               </template>
               
               <!-- Organizational Fields -->
               <template v-else>
                 <div class="space-y-4">
+                  <div>
+                    <p class="text-sm text-muted-foreground">Customer Number</p>
+                    <p class="font-medium font-mono">{{ customer.customerNumber }}</p>
+                  </div>
+                  
                   <div>
                     <p class="text-sm text-muted-foreground">Organization Name</p>
                     <p class="font-medium text-lg">{{ customer.details?.organizationName }}</p>
@@ -313,20 +354,6 @@ const handleEditSuccess = () => {
                   </div>
                 </div>
               </template>
-              
-              <!-- Address (for both types) -->
-              <div class="md:col-span-2 pt-4 border-t border-border">
-                <div class="flex items-start gap-3">
-                  <MapPin class="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <p class="text-sm text-muted-foreground">Address</p>
-                    <p class="font-medium">{{ formatAddress(customer.address) }}</p>
-                    <p v-if="customer.latitude && customer.longitude" class="text-xs text-muted-foreground mt-1">
-                      Coordinates: {{ customer.latitude }}, {{ customer.longitude }}
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           </UiCardContent>
         </UiCard>
@@ -356,73 +383,86 @@ const handleEditSuccess = () => {
         </UiCard>
       </div>
       
-      <!-- Linked Meters -->
+      <!-- Subscriptions -->
       <UiCard>
         <UiCardHeader>
           <div class="flex items-center justify-between">
             <div>
-              <UiCardTitle>Linked Meters</UiCardTitle>
-              <UiCardDescription>Water meters associated with this customer</UiCardDescription>
+              <UiCardTitle>Subscriptions</UiCardTitle>
+              <UiCardDescription>Service subscriptions and associated meters</UiCardDescription>
             </div>
-            <UiButton variant="outline" size="sm" @click="navigateTo('/meters')">
-              View All Meters
+            <UiButton variant="outline" size="sm" @click="navigateTo('/subscriptions')">
+              View All Subscriptions
             </UiButton>
           </div>
         </UiCardHeader>
         <UiTable>
           <UiTableHeader>
             <UiTableRow>
-              <UiTableHead>Serial Number</UiTableHead>
-              <UiTableHead>Profile</UiTableHead>
+              <UiTableHead>Subscription No</UiTableHead>
+              <UiTableHead>Address</UiTableHead>
+              <UiTableHead>Type</UiTableHead>
+              <UiTableHead>Group</UiTableHead>
               <UiTableHead>Status</UiTableHead>
-              <UiTableHead>Current Index</UiTableHead>
-              <UiTableHead>Consumption</UiTableHead>
+              <UiTableHead>Meters</UiTableHead>
+              <UiTableHead>Start Date</UiTableHead>
             </UiTableRow>
           </UiTableHeader>
           <UiTableBody>
-            <template v-if="isLoadingMeters">
+            <template v-if="isLoadingSubscriptions">
               <UiTableRow v-for="i in 3" :key="i">
-                <UiTableCell v-for="j in 5" :key="j">
+                <UiTableCell v-for="j in 7" :key="j">
                   <UiSkeleton class="h-4 w-full" />
                 </UiTableCell>
               </UiTableRow>
             </template>
             
-            <template v-else-if="meters.length === 0">
+            <template v-else-if="subscriptions.length === 0">
               <UiTableRow>
-                <UiTableCell :colspan="5" class="text-center py-8 text-muted-foreground">
-                  <Gauge class="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>No meters linked to this customer</p>
+                <UiTableCell :colspan="7" class="text-center py-8 text-muted-foreground">
+                  <FileText class="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No subscriptions for this customer</p>
+                  <p class="text-sm">Create a subscription to link meters</p>
                 </UiTableCell>
               </UiTableRow>
             </template>
             
             <template v-else>
               <UiTableRow
-                v-for="meter in meters"
-                :key="meter.id"
+                v-for="subscription in subscriptions"
+                :key="subscription.id"
                 clickable
-                @click="navigateTo(`/meters/${meter.id}`)"
+                @click="navigateTo(`/subscriptions/${subscription.id}`)"
               >
+                <UiTableCell class="font-mono text-sm font-medium">
+                  {{ subscription.subscriptionNumber }}
+                </UiTableCell>
                 <UiTableCell>
                   <div class="flex items-center gap-2">
-                    <Gauge class="h-4 w-4 text-muted-foreground" />
-                    <span class="font-medium">{{ meter.serialNumber }}</span>
+                    <MapPin class="h-4 w-4 text-muted-foreground" />
+                    <span class="font-medium">{{ formatAddress(subscription.address) }}</span>
                   </div>
                 </UiTableCell>
                 <UiTableCell>
-                  {{ meter.meterProfile?.brand }} {{ meter.meterProfile?.modelCode }}
-                </UiTableCell>
-                <UiTableCell>
-                  <UiBadge :variant="getStatusVariant(meter.status)">
-                    {{ meter.status.replace(/_/g, ' ') }}
+                  <UiBadge variant="outline">
+                    {{ subscription.subscriptionType }}
                   </UiBadge>
                 </UiTableCell>
                 <UiTableCell>
-                  {{ Number(meter.lastReadingValue ?? meter.initialIndex ?? 0).toFixed(3) }} m³
+                  <UiBadge :variant="subscription.subscriptionGroup === 'HIGH_CONSUMPTION' ? 'destructive' : 'secondary'">
+                    {{ subscription.subscriptionGroup?.replace(/_/g, ' ') }}
+                  </UiBadge>
                 </UiTableCell>
                 <UiTableCell>
-                  {{ (Number(meter.lastReadingValue ?? meter.initialIndex ?? 0) - Number(meter.initialIndex ?? 0)).toFixed(3) }} m³
+                  <UiBadge :variant="getStatusVariant(subscription.isActive ? 'ACTIVE' : 'CANCELLED')">
+                    {{ subscription.isActive ? 'Active' : 'Inactive' }}
+                  </UiBadge>
+                </UiTableCell>
+                <UiTableCell>
+                  <span class="font-medium">{{ subscription.meters?.length || 0 }}</span>
+                </UiTableCell>
+                <UiTableCell>
+                  {{ new Date(subscription.startDate).toLocaleDateString() }}
                 </UiTableCell>
               </UiTableRow>
             </template>
@@ -434,7 +474,7 @@ const handleEditSuccess = () => {
       <UiCard>
         <UiCardHeader>
           <UiCardTitle>Consumption History</UiCardTitle>
-          <UiCardDescription>Water usage over time</UiCardDescription>
+          <UiCardDescription>Water usage over time across all subscriptions</UiCardDescription>
         </UiCardHeader>
         <UiCardContent>
           <div class="h-64 flex items-center justify-center text-muted-foreground border border-dashed border-border rounded-lg">

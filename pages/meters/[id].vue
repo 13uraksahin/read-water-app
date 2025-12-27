@@ -20,7 +20,7 @@ import {
   Plus,
   Settings,
 } from 'lucide-vue-next'
-import type { Meter, Reading, Device, DeviceProfile, DeviceStatus } from '~/types'
+import type { Meter, Reading, Device, DeviceProfile, DeviceStatus, Address } from '~/types'
 import { formatDate, formatDateTime, formatWaterUsage } from '~/lib/utils'
 
 definePageMeta({
@@ -147,8 +147,8 @@ const getValveVariant = (status: string): 'default' | 'secondary' | 'destructive
   }
 }
 
-// Format address
-const formatAddress = (address?: Meter['address']): string => {
+// Format address from subscription
+const formatAddress = (address?: Address): string => {
   if (!address) return '-'
   const parts = [
     address.street,
@@ -524,30 +524,34 @@ const handleEditSuccess = () => {
       
       <!-- Associations -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Customer -->
+        <!-- Subscription & Customer -->
         <UiCard>
           <UiCardHeader>
             <UiCardTitle class="flex items-center gap-2">
               <User class="h-4 w-4" />
-              Customer
+              Subscription
             </UiCardTitle>
           </UiCardHeader>
           <UiCardContent>
-            <p v-if="meter.customer" class="font-medium">
-              {{ meter.customer.details?.firstName 
-                ? `${meter.customer.details.firstName} ${meter.customer.details.lastName || ''}`
-                : meter.customer.details?.organizationName }}
-            </p>
-            <p v-else class="text-muted-foreground">Not assigned</p>
-            <UiButton
-              v-if="meter.customer"
-              variant="link"
-              size="sm"
-              class="p-0 h-auto mt-1"
-              @click="navigateTo(`/customers/${meter.customerId}`)"
-            >
-              View Customer →
-            </UiButton>
+            <template v-if="meter.subscription">
+              <p class="font-medium">
+                {{ meter.subscription.customer?.details?.firstName 
+                  ? `${meter.subscription.customer.details.firstName} ${meter.subscription.customer.details.lastName || ''}`
+                  : meter.subscription.customer?.details?.organizationName || 'Unknown' }}
+              </p>
+              <p class="text-sm text-muted-foreground">
+                {{ meter.subscription.subscriptionType }} - {{ meter.subscription.subscriptionGroup?.replace(/_/g, ' ') }}
+              </p>
+              <UiButton
+                variant="link"
+                size="sm"
+                class="p-0 h-auto mt-1"
+                @click="navigateTo(`/subscriptions/${meter.subscriptionId}`)"
+              >
+                View Subscription →
+              </UiButton>
+            </template>
+            <p v-else class="text-muted-foreground">Not assigned to subscription</p>
           </UiCardContent>
         </UiCard>
         
@@ -572,7 +576,7 @@ const handleEditSuccess = () => {
           </UiCardContent>
         </UiCard>
         
-        <!-- Location -->
+        <!-- Location (from Subscription) -->
         <UiCard>
           <UiCardHeader>
             <UiCardTitle class="flex items-center gap-2">
@@ -581,9 +585,9 @@ const handleEditSuccess = () => {
             </UiCardTitle>
           </UiCardHeader>
           <UiCardContent>
-            <p class="text-sm">{{ formatAddress(meter.address) }}</p>
-            <p v-if="meter.latitude && meter.longitude" class="text-xs text-muted-foreground mt-1 font-mono">
-              {{ Number(meter.latitude).toFixed(6) }}, {{ Number(meter.longitude).toFixed(6) }}
+            <p class="text-sm">{{ formatAddress(meter.subscription?.address) }}</p>
+            <p v-if="meter.subscription?.latitude && meter.subscription?.longitude" class="text-xs text-muted-foreground mt-1 font-mono">
+              {{ Number(meter.subscription.latitude).toFixed(6) }}, {{ Number(meter.subscription.longitude).toFixed(6) }}
             </p>
           </UiCardContent>
         </UiCard>

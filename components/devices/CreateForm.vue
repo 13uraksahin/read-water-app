@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Info } from 'lucide-vue-next'
+import { Info, Wifi } from 'lucide-vue-next'
 import {
   DeviceStatus,
   CommunicationTechnology,
@@ -8,6 +8,7 @@ import {
   type Device,
   type Tenant,
   type TechFieldDefinition,
+  type DeviceCommunicationConfig,
 } from '~/types'
 
 const props = defineProps<{
@@ -40,6 +41,7 @@ const formData = reactive({
   deviceProfileId: props.device?.deviceProfileId || '',
   serialNumber: props.device?.serialNumber || '',
   status: props.device?.status || DeviceStatus.WAREHOUSE,
+  // Dynamic fields will be populated based on profile
   dynamicFields: { ...(props.device?.dynamicFields || {}) } as Record<string, string>,
   metadata: props.device?.metadata || {},
 })
@@ -63,39 +65,66 @@ const selectedProfile = computed(() => {
   return deviceProfiles.value.find(p => p.id === formData.deviceProfileId)
 })
 
-// Field definitions from selected profile
-const fieldDefinitions = computed((): TechFieldDefinition[] => {
+// Get communication configs from profile (new format or legacy)
+const profileCommunicationConfigs = computed((): DeviceCommunicationConfig[] => {
   if (!selectedProfile.value) return []
   
-  // Use profile's field definitions if available
-  if (selectedProfile.value.fieldDefinitions?.length) {
-    return selectedProfile.value.fieldDefinitions.map(def => ({
-      name: def.name,
-      label: def.label || def.name,
-      type: def.type || 'string',
-      length: def.length || 32,
-      regex: def.regex || '.*',
-      required: def.required ?? true,
-      description: def.description,
-    }))
+  // Check for new format: communicationConfigs in specifications
+  const specs = selectedProfile.value.specifications as Record<string, unknown> | undefined
+  if (specs?.communicationConfigs && Array.isArray(specs.communicationConfigs)) {
+    return specs.communicationConfigs as DeviceCommunicationConfig[]
   }
   
-  // Fallback to static definitions based on technology
-  const tech = selectedProfile.value.communicationTechnology
-  if (tech && COMMUNICATION_TECH_FIELDS[tech]) {
-    return COMMUNICATION_TECH_FIELDS[tech]
+  // Fallback: Legacy single technology format
+  if (selectedProfile.value.communicationTechnology) {
+    const fieldDefs = selectedProfile.value.fieldDefinitions?.length 
+      ? selectedProfile.value.fieldDefinitions
+      : COMMUNICATION_TECH_FIELDS[selectedProfile.value.communicationTechnology] || []
+    
+    return [{
+      technology: selectedProfile.value.communicationTechnology,
+      fieldDefinitions: fieldDefs,
+    }]
   }
   
   return []
 })
 
+// Get all field definitions from all technologies in the profile
+const allFieldDefinitions = computed((): (TechFieldDefinition & { technology: CommunicationTechnology })[] => {
+  const fields: (TechFieldDefinition & { technology: CommunicationTechnology })[] = []
+  
+  for (const config of profileCommunicationConfigs.value) {
+    for (const fieldDef of config.fieldDefinitions) {
+      fields.push({
+        name: fieldDef.name,
+        label: fieldDef.label || fieldDef.name,
+        type: fieldDef.type || 'string',
+        length: fieldDef.length || 32,
+        regex: fieldDef.regex || '.*',
+        required: fieldDef.required ?? true,
+        description: fieldDef.description,
+        technology: config.technology,
+      })
+    }
+  }
+  
+  return fields
+})
+
+// Check if profile has multiple technologies
+const hasMultipleTechnologies = computed(() => profileCommunicationConfigs.value.length > 1)
+
 // Watch for profile changes and initialize dynamic fields
 watch(() => formData.deviceProfileId, () => {
   if (!isEditMode.value) {
+    // Reset dynamic fields when profile changes
     formData.dynamicFields = {}
-    fieldDefinitions.value.forEach(def => {
-      formData.dynamicFields[def.name] = ''
-    })
+    
+    // Initialize all fields from the profile's field definitions
+    for (const fieldDef of allFieldDefinitions.value) {
+      formData.dynamicFields[fieldDef.name] = ''
+    }
   }
 })
 
@@ -141,15 +170,15 @@ const validate = (): boolean => {
     if (!formData.serialNumber) errors.serialNumber = 'Serial number is required'
   }
   
-  // Validate dynamic fields
-  fieldDefinitions.value.forEach(def => {
-    const value = formData.dynamicFields[def.name] || ''
-    if (def.required && !value) {
-      errors[`field_${def.name}`] = `${def.label || def.name} is required`
-    } else if (value && !validateField(value, def)) {
-      errors[`field_${def.name}`] = `Invalid ${def.label || def.name} format`
+  // Validate all dynamic fields from the profile
+  for (const fieldDef of allFieldDefinitions.value) {
+    const value = formData.dynamicFields[fieldDef.name] || ''
+    if (fieldDef.required && !value) {
+      errors[`field_${fieldDef.name}`] = `${fieldDef.label || fieldDef.name} is required`
+    } else if (value && !validateField(value, fieldDef)) {
+      errors[`field_${fieldDef.name}`] = `Invalid ${fieldDef.label || fieldDef.name} format`
     }
-  })
+  }
   
   return Object.keys(errors).length === 0
 }
@@ -274,40 +303,104 @@ onMounted(() => {
         </div>
       </div>
       
-      <!-- Dynamic Fields (Communication Keys) -->
-      <div v-if="selectedProfile && fieldDefinitions.length > 0" class="space-y-4 pt-4 border-t border-border">
+      <!-- Communication Keys (from Profile) -->
+      <div v-if="selectedProfile && allFieldDefinitions.length > 0" class="space-y-4 pt-4 border-t border-border">
         <div class="flex items-start gap-2">
-          <h3 class="font-medium text-lg">Communication Keys</h3>
-          <div class="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-            <Info class="h-3 w-3" />
-            <span>Fields for {{ selectedProfile.communicationTechnology?.replace(/_/g, '-') }}</span>
+          <h3 class="font-medium text-lg flex items-center gap-2">
+            <Wifi class="h-5 w-5" />
+            Communication Keys
+          </h3>
+          <div v-if="hasMultipleTechnologies" class="flex gap-1">
+            <UiBadge 
+              v-for="config in profileCommunicationConfigs" 
+              :key="config.technology" 
+              variant="outline"
+              class="text-xs"
+            >
+              {{ config.technology.replace(/_/g, '-') }}
+            </UiBadge>
           </div>
         </div>
         
-        <div class="p-4 rounded-lg border border-border bg-muted/50">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div v-for="def in fieldDefinitions" :key="def.name">
-              <UiLabel :error="!!errors[`field_${def.name}`]">
-                {{ def.label || def.name }}
-                <span v-if="def.required" class="text-destructive">*</span>
-                <span v-if="def.length" class="text-xs text-muted-foreground ml-1">({{ def.length }} chars)</span>
-              </UiLabel>
-              <UiInput
-                v-model="formData.dynamicFields[def.name]"
-                :placeholder="def.description || `Enter ${def.label || def.name}`"
-                :error="!!errors[`field_${def.name}`]"
-                :maxlength="def.length"
-                class="font-mono uppercase"
-              />
-              <p v-if="errors[`field_${def.name}`]" class="text-xs text-destructive mt-1">
-                {{ errors[`field_${def.name}`] }}
-              </p>
-              <p v-else-if="def.regex && def.regex !== '.*'" class="text-xs text-muted-foreground mt-1">
-                Format: {{ def.regex }}
-              </p>
+        <div class="flex items-center gap-1 text-xs text-muted-foreground">
+          <Info class="h-3 w-3" />
+          <span>Fields defined by the selected device profile</span>
+        </div>
+        
+        <!-- Group fields by technology if multiple -->
+        <template v-if="hasMultipleTechnologies">
+          <div 
+            v-for="config in profileCommunicationConfigs" 
+            :key="config.technology"
+            class="rounded-lg border border-border overflow-hidden"
+          >
+            <div class="p-3 bg-muted/50 border-b border-border">
+              <UiBadge variant="outline">{{ config.technology.replace(/_/g, '-') }}</UiBadge>
+            </div>
+            <div class="p-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div 
+                  v-for="fieldDef in config.fieldDefinitions" 
+                  :key="fieldDef.name"
+                >
+                  <UiLabel :error="!!errors[`field_${fieldDef.name}`]">
+                    {{ fieldDef.label || fieldDef.name }}
+                    <span v-if="fieldDef.required" class="text-destructive">*</span>
+                    <span v-if="fieldDef.length" class="text-xs text-muted-foreground ml-1">({{ fieldDef.length }} chars)</span>
+                  </UiLabel>
+                  <UiInput
+                    v-model="formData.dynamicFields[fieldDef.name]"
+                    :placeholder="fieldDef.description || `Enter ${fieldDef.label || fieldDef.name}`"
+                    :error="!!errors[`field_${fieldDef.name}`]"
+                    :maxlength="fieldDef.length"
+                    class="font-mono uppercase"
+                  />
+                  <p v-if="errors[`field_${fieldDef.name}`]" class="text-xs text-destructive mt-1">
+                    {{ errors[`field_${fieldDef.name}`] }}
+                  </p>
+                  <p v-else-if="fieldDef.regex && fieldDef.regex !== '.*'" class="text-xs text-muted-foreground mt-1">
+                    Format: {{ fieldDef.regex }}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </template>
+        
+        <!-- Single technology - simpler layout -->
+        <template v-else>
+          <div class="p-4 rounded-lg border border-border bg-muted/50">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div v-for="fieldDef in allFieldDefinitions" :key="fieldDef.name">
+                <UiLabel :error="!!errors[`field_${fieldDef.name}`]">
+                  {{ fieldDef.label || fieldDef.name }}
+                  <span v-if="fieldDef.required" class="text-destructive">*</span>
+                  <span v-if="fieldDef.length" class="text-xs text-muted-foreground ml-1">({{ fieldDef.length }} chars)</span>
+                </UiLabel>
+                <UiInput
+                  v-model="formData.dynamicFields[fieldDef.name]"
+                  :placeholder="fieldDef.description || `Enter ${fieldDef.label || fieldDef.name}`"
+                  :error="!!errors[`field_${fieldDef.name}`]"
+                  :maxlength="fieldDef.length"
+                  class="font-mono uppercase"
+                />
+                <p v-if="errors[`field_${fieldDef.name}`]" class="text-xs text-destructive mt-1">
+                  {{ errors[`field_${fieldDef.name}`] }}
+                </p>
+                <p v-else-if="fieldDef.regex && fieldDef.regex !== '.*'" class="text-xs text-muted-foreground mt-1">
+                  Format: {{ fieldDef.regex }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+      
+      <!-- No fields defined message -->
+      <div v-else-if="selectedProfile && allFieldDefinitions.length === 0" class="p-6 rounded-lg border border-dashed border-border text-center text-muted-foreground">
+        <Wifi class="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>No communication keys defined for this profile</p>
+        <p class="text-sm">This device profile has no field definitions configured</p>
       </div>
       
       <!-- Profile Info (Read-only) -->
@@ -325,7 +418,17 @@ onMounted(() => {
           </div>
           <div>
             <p class="text-muted-foreground">Technology</p>
-            <p class="font-medium">{{ selectedProfile.communicationTechnology?.replace(/_/g, '-') }}</p>
+            <div class="flex flex-wrap gap-1">
+              <UiBadge 
+                v-for="config in profileCommunicationConfigs" 
+                :key="config.technology" 
+                variant="outline"
+                class="text-xs"
+              >
+                {{ config.technology.replace(/_/g, '-') }}
+              </UiBadge>
+              <span v-if="profileCommunicationConfigs.length === 0" class="font-medium">-</span>
+            </div>
           </div>
           <div>
             <p class="text-muted-foreground">Integration</p>

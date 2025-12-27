@@ -97,7 +97,7 @@ const fetchProfiles = async () => {
   }
 }
 
-// Initial fetch
+// Fetch on mount (NuxtPage key ensures re-mount on navigation)
 onMounted(async () => {
   await Promise.all([fetchDevices(), fetchProfiles()])
 })
@@ -123,6 +123,7 @@ const getStatusVariant = (status: DeviceStatus): 'success' | 'warning' | 'error'
     ACTIVE: 'success',
     PASSIVE: 'secondary',
     PLANNED: 'secondary',
+    USED: 'secondary',
   }
   return variants[status] || 'secondary'
 }

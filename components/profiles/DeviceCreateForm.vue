@@ -41,8 +41,19 @@ const isEditMode = computed(() => props.mode === 'edit')
 
 // Initialize communication configs from existing profile
 const initCommunicationConfigs = (): CommunicationConfig[] => {
+  // Check for new format: communicationConfigs stored in specifications
+  const specs = props.profile?.specifications as Record<string, unknown> | undefined
+  if (specs?.communicationConfigs && Array.isArray(specs.communicationConfigs)) {
+    return (specs.communicationConfigs as CommunicationConfig[]).map(config => ({
+      technology: config.technology,
+      fieldDefinitions: config.fieldDefinitions?.length ? [...config.fieldDefinitions] : [],
+      decoderFunction: config.decoderFunction || '',
+      testPayload: config.testPayload || '',
+    }))
+  }
+  
+  // Fallback: Legacy single technology format
   if (props.profile?.communicationTechnology) {
-    // Single technology from existing profile - convert to array format
     return [{
       technology: props.profile.communicationTechnology,
       fieldDefinitions: props.profile.fieldDefinitions?.length 
@@ -257,8 +268,13 @@ const handleSubmit = async () => {
   isSubmitting.value = true
   
   try {
-    // Use the first technology as the primary config
-    const primaryConfig = formData.communicationConfigs[0]
+    // Build communication configs array with all technologies
+    const communicationConfigs = formData.communicationConfigs.map(config => ({
+      technology: config.technology,
+      fieldDefinitions: config.fieldDefinitions.filter(f => f.name),
+      decoderFunction: config.decoderFunction || undefined,
+      testPayload: config.testPayload || undefined,
+    }))
     
     // Build payload - exclude read-only fields in edit mode
     const payload = {
@@ -266,14 +282,12 @@ const handleSubmit = async () => {
       ...(isEditMode.value ? {} : {
         brand: formData.brand,
         modelCode: formData.modelCode,
-        communicationTechnology: primaryConfig?.technology,
       }),
       // Fields allowed on both create and update
       integrationType: formData.integrationType,
       batteryLifeMonths: formData.batteryLifeMonths,
-      fieldDefinitions: primaryConfig?.fieldDefinitions.filter(f => f.name) || [],
-      decoderFunction: primaryConfig?.decoderFunction || undefined,
-      testPayload: primaryConfig?.testPayload || undefined,
+      // Send all communication configs (new format)
+      communicationConfigs,
     }
     
     if (isEditMode.value && props.profile) {
@@ -364,7 +378,6 @@ const handleSubmit = async () => {
           </p>
         </div>
         <UiButton 
-          v-if="!isEditMode"
           type="button" 
           variant="outline" 
           size="sm" 
@@ -402,16 +415,11 @@ const handleSubmit = async () => {
                   ...availableTechnologies
                 ]"
                 class="w-48"
-                :disabled="isEditMode"
                 @update:model-value="(val: string | number) => updateTechnology(configIndex, val as CommunicationTechnology)"
               />
               <UiBadge variant="outline">Technology {{ configIndex + 1 }}</UiBadge>
-              <span v-if="isEditMode" class="text-xs text-muted-foreground">
-                (cannot be changed)
-              </span>
             </div>
             <UiButton
-              v-if="!isEditMode"
               type="button"
               variant="ghost"
               size="icon"
