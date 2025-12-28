@@ -9,6 +9,7 @@ import {
   type MeterProfile,
   type DeviceProfile,
 } from '~/types'
+import { SearchableSelect } from '~/components/ui/searchable-select'
 
 const props = defineProps<{
   profile?: MeterProfile
@@ -228,10 +229,12 @@ onMounted(() => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <UiLabel :error="!!errors.brand">Brand *</UiLabel>
-          <UiSelect
+          <SearchableSelect
             v-model="formData.brand"
             :options="brandOptions"
             placeholder="Select brand"
+            search-placeholder="Search brands..."
+            empty-text="No brands found"
             :error="!!errors.brand"
             :disabled="isEditMode"
           />
@@ -257,53 +260,69 @@ onMounted(() => {
         
         <div>
           <UiLabel :error="!!errors.meterType">Meter Type *</UiLabel>
-          <UiSelect
+          <SearchableSelect
             v-model="formData.meterType"
             :options="meterTypeOptions"
             placeholder="Select type"
+            search-placeholder="Search types..."
+            empty-text="No types found"
             :error="!!errors.meterType"
           />
         </div>
         
         <div>
           <UiLabel :error="!!errors.dialType">Dial Type *</UiLabel>
-          <UiSelect
+          <SearchableSelect
             v-model="formData.dialType"
             :options="dialTypeOptions"
             placeholder="Select dial type"
+            search-placeholder="Search dial types..."
+            empty-text="No dial types found"
             :error="!!errors.dialType"
           />
         </div>
         
         <div>
           <UiLabel>Connection Type</UiLabel>
-          <UiSelect
+          <SearchableSelect
             v-model="formData.connectionType"
             :options="connectionTypeOptions"
+            placeholder="Select connection type"
+            search-placeholder="Search..."
+            empty-text="No options available"
           />
         </div>
         
         <div>
           <UiLabel>Mounting Type</UiLabel>
-          <UiSelect
+          <SearchableSelect
             v-model="formData.mountingType"
             :options="mountingTypeOptions"
+            placeholder="Select mounting type"
+            search-placeholder="Search..."
+            empty-text="No options available"
           />
         </div>
         
         <div>
           <UiLabel>Temperature Type</UiLabel>
-          <UiSelect
+          <SearchableSelect
             v-model="formData.temperatureType"
             :options="temperatureTypeOptions"
+            placeholder="Select temperature type"
+            search-placeholder="Search..."
+            empty-text="No options available"
           />
         </div>
         
         <div>
           <UiLabel>IP Rating</UiLabel>
-          <UiSelect
+          <SearchableSelect
             v-model="formData.ipRating"
             :options="ipRatingOptions"
+            placeholder="Select IP rating"
+            search-placeholder="Search IP ratings..."
+            empty-text="No ratings found"
           />
         </div>
       </div>
@@ -440,9 +459,12 @@ onMounted(() => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <UiLabel>Module Type</UiLabel>
-          <UiSelect
+          <SearchableSelect
             v-model="formData.communicationModule"
             :options="communicationModuleOptions"
+            placeholder="Select module type"
+            search-placeholder="Search..."
+            empty-text="No options available"
           />
         </div>
       </div>

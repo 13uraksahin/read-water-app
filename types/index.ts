@@ -320,9 +320,23 @@ export interface DeviceFieldDefinition {
   description?: string
 }
 
+// Scenario definition for a messaging mode within a technology
+export interface Scenario {
+  id: string                      // UUID for reference
+  name: string                    // Free-form: "Daily Reading", "Alarm", etc.
+  isDefault: boolean              // Default scenario for this technology
+  decoderFunction?: string        // Scenario-specific decoder
+  testPayload?: string            // For testing this decoder
+  expectedBatteryMonths?: number  // Battery life for this messaging mode
+  messageInterval?: number        // Interval in minutes (1440 = daily, 60 = hourly)
+  description?: string            // Optional description
+}
+
 export interface DeviceCommunicationConfig {
   technology: CommunicationTechnology
   fieldDefinitions: DeviceFieldDefinition[]
+  scenarios?: Scenario[]          // Multiple scenarios per technology
+  // DEPRECATED: Legacy fields for backward compatibility
   decoderFunction?: string
   testPayload?: string
 }
@@ -357,6 +371,10 @@ export interface Device {
   deviceProfileId: string
   serialNumber: string
   status: DeviceStatus
+  // Selected communication technology (when profile has multiple)
+  selectedTechnology?: CommunicationTechnology
+  // Active scenario IDs for this device
+  activeScenarioIds?: string[]
   // Dynamic fields populated based on DeviceProfile's field definitions
   dynamicFields: Record<string, string>
   lastSignalStrength?: number
@@ -568,6 +586,10 @@ export interface CreateDeviceForm {
   deviceProfileId: string
   serialNumber: string
   status?: DeviceStatus
+  // Selected communication technology (required if profile has multiple)
+  selectedTechnology?: CommunicationTechnology
+  // Active scenario IDs for this device
+  activeScenarioIds?: string[]
   // Dynamic fields populated based on DeviceProfile's field definitions
   dynamicFields: Record<string, string>
   metadata?: Record<string, unknown>

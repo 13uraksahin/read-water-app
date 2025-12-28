@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { CustomerType, type Tenant, type Customer } from '~/types'
+import { SearchableSelect } from '~/components/ui/searchable-select'
 
 const props = defineProps<{
   customer?: Customer
@@ -132,10 +133,12 @@ onMounted(() => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <UiLabel>Tenant *</UiLabel>
-          <UiSelect
+          <SearchableSelect
             v-model="formData.tenantId"
             :options="tenants.map(t => ({ label: t.name, value: t.id }))"
             placeholder="Select tenant"
+            search-placeholder="Search tenants..."
+            empty-text="No tenants found"
             :disabled="isEditMode"
           />
           <p v-if="isEditMode" class="text-xs text-muted-foreground mt-1">
@@ -157,9 +160,12 @@ onMounted(() => {
       
       <div>
         <UiLabel>Customer Type *</UiLabel>
-        <UiSelect
+        <SearchableSelect
           v-model="formData.customerType"
           :options="customerTypeOptions"
+          placeholder="Select type"
+          search-placeholder="Search..."
+          empty-text="No types available"
         />
       </div>
       

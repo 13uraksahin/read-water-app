@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Info, Wifi } from 'lucide-vue-next'
+import { Info, Wifi, Zap, Star } from 'lucide-vue-next'
 import {
   DeviceStatus,
   CommunicationTechnology,
@@ -9,7 +9,9 @@ import {
   type Tenant,
   type TechFieldDefinition,
   type DeviceCommunicationConfig,
+  type Scenario,
 } from '~/types'
+import { SearchableSelect } from '~/components/ui/searchable-select'
 
 const props = defineProps<{
   device?: Device
@@ -41,6 +43,10 @@ const formData = reactive({
   deviceProfileId: props.device?.deviceProfileId || '',
   serialNumber: props.device?.serialNumber || '',
   status: props.device?.status || DeviceStatus.WAREHOUSE,
+  // Selected technology (required if profile has multiple technologies)
+  selectedTechnology: props.device?.selectedTechnology || '' as CommunicationTechnology | '',
+  // Active scenario IDs (multi-select)
+  activeScenarioIds: props.device?.activeScenarioIds || [] as string[],
   // Dynamic fields will be populated based on profile
   dynamicFields: { ...(props.device?.dynamicFields || {}) } as Record<string, string>,
   metadata: props.device?.metadata || {},
@@ -115,18 +121,92 @@ const allFieldDefinitions = computed((): (TechFieldDefinition & { technology: Co
 // Check if profile has multiple technologies
 const hasMultipleTechnologies = computed(() => profileCommunicationConfigs.value.length > 1)
 
-// Watch for profile changes and initialize dynamic fields
+// Get scenarios for the selected technology
+const selectedTechnologyConfig = computed(() => {
+  if (!formData.selectedTechnology) return null
+  return profileCommunicationConfigs.value.find(c => c.technology === formData.selectedTechnology)
+})
+
+// Get available scenarios from the selected technology
+const availableScenarios = computed((): Scenario[] => {
+  if (!selectedTechnologyConfig.value?.scenarios) return []
+  return selectedTechnologyConfig.value.scenarios
+})
+
+// Check if profile has scenarios
+const hasScenarios = computed(() => {
+  return profileCommunicationConfigs.value.some(c => c.scenarios && c.scenarios.length > 0)
+})
+
+// Technology options for dropdown
+const technologyOptions = computed(() => {
+  return profileCommunicationConfigs.value.map(c => ({
+    label: c.technology.replace(/_/g, '-'),
+    value: c.technology,
+  }))
+})
+
+// Get field definitions for selected technology only
+const selectedTechnologyFieldDefinitions = computed((): TechFieldDefinition[] => {
+  if (!selectedTechnologyConfig.value) {
+    // If no technology selected, show all fields (legacy behavior)
+    return allFieldDefinitions.value
+  }
+  
+  return (selectedTechnologyConfig.value.fieldDefinitions || []).map(fd => ({
+    name: fd.name,
+    label: fd.label || fd.name,
+    type: fd.type || 'string',
+    length: fd.length || 32,
+    regex: fd.regex || '.*',
+    required: fd.required ?? true,
+    description: fd.description,
+  }))
+})
+
+// Watch for profile changes and initialize technology/scenarios/fields
 watch(() => formData.deviceProfileId, () => {
   if (!isEditMode.value) {
-    // Reset dynamic fields when profile changes
+    // Reset selections when profile changes
+    formData.selectedTechnology = ''
+    formData.activeScenarioIds = []
     formData.dynamicFields = {}
     
-    // Initialize all fields from the profile's field definitions
-    for (const fieldDef of allFieldDefinitions.value) {
+    // Auto-select technology if only one
+    if (profileCommunicationConfigs.value.length === 1) {
+      formData.selectedTechnology = profileCommunicationConfigs.value[0].technology
+    }
+  }
+})
+
+// Watch for technology changes and initialize scenarios/fields
+watch(() => formData.selectedTechnology, () => {
+  if (!isEditMode.value && formData.selectedTechnology) {
+    // Reset and select default scenarios
+    formData.activeScenarioIds = []
+    
+    const defaultScenarios = availableScenarios.value.filter(s => s.isDefault)
+    if (defaultScenarios.length > 0) {
+      formData.activeScenarioIds = defaultScenarios.map(s => s.id)
+    }
+    
+    // Reset and initialize fields for selected technology
+    formData.dynamicFields = {}
+    for (const fieldDef of selectedTechnologyFieldDefinitions.value) {
       formData.dynamicFields[fieldDef.name] = ''
     }
   }
 })
+
+// Toggle scenario selection
+const toggleScenario = (scenarioId: string) => {
+  const index = formData.activeScenarioIds.indexOf(scenarioId)
+  if (index === -1) {
+    formData.activeScenarioIds.push(scenarioId)
+  } else {
+    formData.activeScenarioIds.splice(index, 1)
+  }
+}
 
 // Validate field against regex
 const validateField = (value: string, def: TechFieldDefinition): boolean => {
@@ -168,10 +248,19 @@ const validate = (): boolean => {
     if (!formData.tenantId) errors.tenantId = 'Tenant is required'
     if (!formData.deviceProfileId) errors.deviceProfileId = 'Device profile is required'
     if (!formData.serialNumber) errors.serialNumber = 'Serial number is required'
+    
+    // Validate technology selection if profile has multiple technologies
+    if (hasMultipleTechnologies.value && !formData.selectedTechnology) {
+      errors.selectedTechnology = 'Please select a communication technology'
+    }
   }
   
-  // Validate all dynamic fields from the profile
-  for (const fieldDef of allFieldDefinitions.value) {
+  // Validate dynamic fields for selected technology
+  const fieldsToValidate = formData.selectedTechnology 
+    ? selectedTechnologyFieldDefinitions.value 
+    : allFieldDefinitions.value
+  
+  for (const fieldDef of fieldsToValidate) {
     const value = formData.dynamicFields[fieldDef.name] || ''
     if (fieldDef.required && !value) {
       errors[`field_${fieldDef.name}`] = `${fieldDef.label || fieldDef.name} is required`
@@ -203,6 +292,8 @@ const handleSubmit = async () => {
       }),
       // Fields allowed on both create and update
       status: formData.status,
+      selectedTechnology: formData.selectedTechnology || undefined,
+      activeScenarioIds: formData.activeScenarioIds.length > 0 ? formData.activeScenarioIds : undefined,
       dynamicFields: formData.dynamicFields,
       metadata: formData.metadata,
     }
@@ -244,10 +335,12 @@ onMounted(() => {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <UiLabel :error="!!errors.tenantId">Tenant *</UiLabel>
-            <UiSelect
+            <SearchableSelect
               v-model="formData.tenantId"
               :options="tenants.map(t => ({ label: t.name, value: t.id }))"
               placeholder="Select tenant"
+              search-placeholder="Search tenants..."
+              empty-text="No tenants found"
               :error="!!errors.tenantId"
               :disabled="isEditMode"
             />
@@ -259,13 +352,16 @@ onMounted(() => {
           
           <div>
             <UiLabel :error="!!errors.deviceProfileId">Device Profile *</UiLabel>
-            <UiSelect
+            <SearchableSelect
               v-model="formData.deviceProfileId"
               :options="deviceProfiles.map(p => ({ 
-                label: `${p.brand} ${p.modelCode} (${p.communicationTechnology?.replace(/_/g, '-')})`, 
-                value: p.id 
+                label: `${p.brand} ${p.modelCode}`, 
+                value: p.id,
+                description: p.communicationTechnology?.replace(/_/g, '-')
               }))"
               placeholder="Select device profile"
+              search-placeholder="Search device profiles..."
+              empty-text="No device profiles found"
               :error="!!errors.deviceProfileId"
               :disabled="isEditMode"
             />
@@ -291,9 +387,12 @@ onMounted(() => {
           
           <div>
             <UiLabel>Status</UiLabel>
-            <UiSelect
+            <SearchableSelect
               v-model="formData.status"
               :options="statusOptions"
+              placeholder="Select status"
+              search-placeholder="Search status..."
+              empty-text="No status found"
               :disabled="!isEditMode"
             />
             <p v-if="!isEditMode" class="text-xs text-muted-foreground mt-1">
@@ -303,23 +402,78 @@ onMounted(() => {
         </div>
       </div>
       
+      <!-- Technology & Scenario Selection (when profile has multiple technologies or scenarios) -->
+      <div v-if="selectedProfile && (hasMultipleTechnologies || hasScenarios)" class="space-y-4 pt-4 border-t border-border">
+        <h3 class="font-medium text-lg flex items-center gap-2">
+          <Zap class="h-5 w-5" />
+          Communication Setup
+        </h3>
+        
+        <!-- Technology Selection -->
+        <div v-if="hasMultipleTechnologies" class="space-y-2">
+          <UiLabel :error="!!errors.selectedTechnology">
+            Communication Technology *
+          </UiLabel>
+          <SearchableSelect
+            v-model="formData.selectedTechnology"
+            :options="technologyOptions"
+            placeholder="Select technology"
+            search-placeholder="Search technologies..."
+            empty-text="No technologies available"
+            :error="!!errors.selectedTechnology"
+          />
+          <p v-if="errors.selectedTechnology" class="text-xs text-destructive">
+            {{ errors.selectedTechnology }}
+          </p>
+          <p v-else class="text-xs text-muted-foreground">
+            This device profile supports multiple technologies. Select one for this device.
+          </p>
+        </div>
+        
+        <!-- Scenario Selection (only show when technology is selected) -->
+        <div v-if="availableScenarios.length > 0" class="space-y-3">
+          <div>
+            <UiLabel>Active Scenarios</UiLabel>
+            <p class="text-xs text-muted-foreground">
+              Select which messaging scenarios this device will use (can select multiple)
+            </p>
+          </div>
+          
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="scenario in availableScenarios"
+              :key="scenario.id"
+              type="button"
+              class="px-3 py-2 rounded-lg border text-sm transition-colors flex items-center gap-2"
+              :class="formData.activeScenarioIds.includes(scenario.id)
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border hover:border-primary/50 hover:bg-muted/50'"
+              @click="toggleScenario(scenario.id)"
+            >
+              <Star v-if="scenario.isDefault" class="h-3 w-3" :class="formData.activeScenarioIds.includes(scenario.id) ? 'fill-current' : ''" />
+              <span>{{ scenario.name }}</span>
+              <span v-if="scenario.messageInterval" class="text-xs text-muted-foreground">
+                ({{ scenario.messageInterval >= 1440 ? `${Math.round(scenario.messageInterval / 1440)}d` : `${scenario.messageInterval}m` }})
+              </span>
+            </button>
+          </div>
+          
+          <p v-if="formData.activeScenarioIds.length === 0" class="text-xs text-amber-600">
+            No scenarios selected. Default scenario will be used.
+          </p>
+        </div>
+      </div>
+      
       <!-- Communication Keys (from Profile) -->
-      <div v-if="selectedProfile && allFieldDefinitions.length > 0" class="space-y-4 pt-4 border-t border-border">
+      <div v-if="selectedProfile && selectedTechnologyFieldDefinitions.length > 0" class="space-y-4 pt-4 border-t border-border">
         <div class="flex items-start gap-2">
           <h3 class="font-medium text-lg flex items-center gap-2">
             <Wifi class="h-5 w-5" />
             Communication Keys
           </h3>
-          <div v-if="hasMultipleTechnologies" class="flex gap-1">
-            <UiBadge 
-              v-for="config in profileCommunicationConfigs" 
-              :key="config.technology" 
-              variant="outline"
-              class="text-xs"
-            >
-              {{ config.technology.replace(/_/g, '-') }}
-            </UiBadge>
-          </div>
+          <UiBadge v-if="formData.selectedTechnology" variant="outline" class="text-xs">
+            {{ formData.selectedTechnology.replace(/_/g, '-') }}
+          </UiBadge>
         </div>
         
         <div class="flex items-center gap-1 text-xs text-muted-foreground">
@@ -327,80 +481,44 @@ onMounted(() => {
           <span>Fields defined by the selected device profile</span>
         </div>
         
-        <!-- Group fields by technology if multiple -->
-        <template v-if="hasMultipleTechnologies">
-          <div 
-            v-for="config in profileCommunicationConfigs" 
-            :key="config.technology"
-            class="rounded-lg border border-border overflow-hidden"
-          >
-            <div class="p-3 bg-muted/50 border-b border-border">
-              <UiBadge variant="outline">{{ config.technology.replace(/_/g, '-') }}</UiBadge>
-            </div>
-            <div class="p-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div 
-                  v-for="fieldDef in config.fieldDefinitions" 
-                  :key="fieldDef.name"
-                >
-                  <UiLabel :error="!!errors[`field_${fieldDef.name}`]">
-                    {{ fieldDef.label || fieldDef.name }}
-                    <span v-if="fieldDef.required" class="text-destructive">*</span>
-                    <span v-if="fieldDef.length" class="text-xs text-muted-foreground ml-1">({{ fieldDef.length }} chars)</span>
-                  </UiLabel>
-                  <UiInput
-                    v-model="formData.dynamicFields[fieldDef.name]"
-                    :placeholder="fieldDef.description || `Enter ${fieldDef.label || fieldDef.name}`"
-                    :error="!!errors[`field_${fieldDef.name}`]"
-                    :maxlength="fieldDef.length"
-                    class="font-mono uppercase"
-                  />
-                  <p v-if="errors[`field_${fieldDef.name}`]" class="text-xs text-destructive mt-1">
-                    {{ errors[`field_${fieldDef.name}`] }}
-                  </p>
-                  <p v-else-if="fieldDef.regex && fieldDef.regex !== '.*'" class="text-xs text-muted-foreground mt-1">
-                    Format: {{ fieldDef.regex }}
-                  </p>
-                </div>
-              </div>
+        <div class="p-4 rounded-lg border border-border bg-muted/50">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div v-for="fieldDef in selectedTechnologyFieldDefinitions" :key="fieldDef.name">
+              <UiLabel :error="!!errors[`field_${fieldDef.name}`]">
+                {{ fieldDef.label || fieldDef.name }}
+                <span v-if="fieldDef.required" class="text-destructive">*</span>
+                <span v-if="fieldDef.length" class="text-xs text-muted-foreground ml-1">({{ fieldDef.length }} chars)</span>
+              </UiLabel>
+              <UiInput
+                v-model="formData.dynamicFields[fieldDef.name]"
+                :placeholder="fieldDef.description || `Enter ${fieldDef.label || fieldDef.name}`"
+                :error="!!errors[`field_${fieldDef.name}`]"
+                :maxlength="fieldDef.length"
+                class="font-mono uppercase"
+              />
+              <p v-if="errors[`field_${fieldDef.name}`]" class="text-xs text-destructive mt-1">
+                {{ errors[`field_${fieldDef.name}`] }}
+              </p>
+              <p v-else-if="fieldDef.regex && fieldDef.regex !== '.*'" class="text-xs text-muted-foreground mt-1">
+                Format: {{ fieldDef.regex }}
+              </p>
             </div>
           </div>
-        </template>
-        
-        <!-- Single technology - simpler layout -->
-        <template v-else>
-          <div class="p-4 rounded-lg border border-border bg-muted/50">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div v-for="fieldDef in allFieldDefinitions" :key="fieldDef.name">
-                <UiLabel :error="!!errors[`field_${fieldDef.name}`]">
-                  {{ fieldDef.label || fieldDef.name }}
-                  <span v-if="fieldDef.required" class="text-destructive">*</span>
-                  <span v-if="fieldDef.length" class="text-xs text-muted-foreground ml-1">({{ fieldDef.length }} chars)</span>
-                </UiLabel>
-                <UiInput
-                  v-model="formData.dynamicFields[fieldDef.name]"
-                  :placeholder="fieldDef.description || `Enter ${fieldDef.label || fieldDef.name}`"
-                  :error="!!errors[`field_${fieldDef.name}`]"
-                  :maxlength="fieldDef.length"
-                  class="font-mono uppercase"
-                />
-                <p v-if="errors[`field_${fieldDef.name}`]" class="text-xs text-destructive mt-1">
-                  {{ errors[`field_${fieldDef.name}`] }}
-                </p>
-                <p v-else-if="fieldDef.regex && fieldDef.regex !== '.*'" class="text-xs text-muted-foreground mt-1">
-                  Format: {{ fieldDef.regex }}
-                </p>
-              </div>
-            </div>
-          </div>
-        </template>
+        </div>
       </div>
       
       <!-- No fields defined message -->
-      <div v-else-if="selectedProfile && allFieldDefinitions.length === 0" class="p-6 rounded-lg border border-dashed border-border text-center text-muted-foreground">
+      <div v-else-if="selectedProfile && selectedTechnologyFieldDefinitions.length === 0 && formData.selectedTechnology" class="p-6 rounded-lg border border-dashed border-border text-center text-muted-foreground">
         <Wifi class="h-8 w-8 mx-auto mb-2 opacity-50" />
-        <p>No communication keys defined for this profile</p>
-        <p class="text-sm">This device profile has no field definitions configured</p>
+        <p>No communication keys defined for this technology</p>
+        <p class="text-sm">This technology has no field definitions configured</p>
+      </div>
+      
+      <!-- Need to select technology message -->
+      <div v-else-if="selectedProfile && hasMultipleTechnologies && !formData.selectedTechnology" class="p-6 rounded-lg border border-dashed border-border text-center text-muted-foreground">
+        <Wifi class="h-8 w-8 mx-auto mb-2 opacity-50" />
+        <p>Select a communication technology above</p>
+        <p class="text-sm">Communication keys will appear after selecting a technology</p>
       </div>
       
       <!-- Profile Info (Read-only) -->
@@ -434,11 +552,13 @@ onMounted(() => {
             <p class="text-muted-foreground">Integration</p>
             <p class="font-medium">{{ selectedProfile.integrationType }}</p>
           </div>
-          <div v-if="selectedProfile.batteryLifeMonths">
-            <p class="text-muted-foreground">Battery Life</p>
-            <p class="font-medium">{{ selectedProfile.batteryLifeMonths }} months</p>
+          <div v-if="hasScenarios">
+            <p class="text-muted-foreground">Scenarios</p>
+            <p class="font-medium text-green-600">
+              {{ profileCommunicationConfigs.reduce((sum, c) => sum + (c.scenarios?.length || 0), 0) }} configured
+            </p>
           </div>
-          <div v-if="selectedProfile.decoderFunction">
+          <div v-else-if="selectedProfile.decoderFunction">
             <p class="text-muted-foreground">Decoder</p>
             <p class="font-medium text-green-600">✓ Configured</p>
           </div>

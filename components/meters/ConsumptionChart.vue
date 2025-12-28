@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Activity, TrendingUp, Calendar, BarChart3 } from 'lucide-vue-next'
 import type { Reading } from '~/types'
+import { SearchableSelect } from '~/components/ui/searchable-select'
 
 const props = defineProps<{
   meterId: string
@@ -187,7 +188,7 @@ watch([() => props.meterId, period], fetchChartData, { immediate: true })
           </div>
           
           <!-- Period Selector (for daily view) -->
-          <UiSelect
+          <SearchableSelect
             v-if="chartType === 'daily'"
             v-model="period"
             :options="[
@@ -196,6 +197,9 @@ watch([() => props.meterId, period], fetchChartData, { immediate: true })
               { label: 'Last 45 days', value: '45d' },
             ]"
             class="w-36"
+            placeholder="Select period"
+            search-placeholder="Search..."
+            empty-text="No periods"
           />
         </div>
       </div>

@@ -54,10 +54,16 @@ const fetchDeviceProfiles = async () => {
   }
 }
 
-// Fetch on mount (NuxtPage key ensures re-mount on navigation)
-onMounted(() => {
+// Fetch all data
+const fetchAllData = () => {
   fetchMeterProfiles()
   fetchDeviceProfiles()
+}
+
+// Fetch data on mount - profiles are global configurations, not tenant-specific
+// Use onMounted which is reliable for Nuxt pages with key-based remounting
+onMounted(() => {
+  fetchAllData()
 })
 
 // Watch for search changes

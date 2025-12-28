@@ -11,6 +11,7 @@ import {
   type Meter,
   COMMUNICATION_TECH_FIELDS,
 } from '~/types'
+import { SearchableSelect } from '~/components/ui/searchable-select'
 
 const props = defineProps<{
   meter?: Meter
@@ -36,7 +37,6 @@ const isEditMode = computed(() => props.mode === 'edit')
 
 // Lookups
 const tenants = ref<Tenant[]>([])
-const subscriptions = ref<Subscription[]>([])
 const meterProfiles = ref<MeterProfile[]>([])
 const availableDevices = ref<Device[]>([])
 const deviceProfiles = ref<DeviceProfile[]>([])
@@ -83,10 +83,8 @@ const selectedMeterProfile = computed(() => {
   return meterProfiles.value.find(p => p.id === formData.meterProfileId)
 })
 
-// Selected subscription
-const selectedSubscription = computed(() => {
-  return subscriptions.value.find(s => s.id === formData.subscriptionId)
-})
+// Selected subscription (tracked via SubscriptionSelectDialog)
+const selectedSubscription = ref<Subscription | null>(null)
 
 // Selected device profile for new device
 const selectedDeviceProfile = computed(() => {
@@ -135,33 +133,10 @@ const fetchLookups = async () => {
     if (!isEditMode.value && tenants.value.length === 1 && tenants.value[0]) {
       formData.tenantId = tenants.value[0].id
     }
-    
-    // If editing and tenant is set, fetch subscriptions
-    if (isEditMode.value && formData.tenantId) {
-      await fetchSubscriptions()
-    }
   } catch (error) {
     toast.error('Failed to load form data')
   } finally {
     isLoading.value = false
-  }
-}
-
-// Fetch subscriptions when tenant changes
-const fetchSubscriptions = async () => {
-  if (!formData.tenantId) {
-    subscriptions.value = []
-    return
-  }
-  
-  try {
-    const response = await api.getList<Subscription>('/api/v1/subscriptions', { 
-      tenantId: formData.tenantId, 
-      limit: 100 
-    })
-    subscriptions.value = response.data
-  } catch (error) {
-    console.error('Failed to fetch subscriptions:', error)
   }
 }
 
@@ -195,7 +170,9 @@ const fetchAvailableDevices = async () => {
 
 // Watch tenant and profile changes
 watch(() => formData.tenantId, () => {
-  fetchSubscriptions()
+  // Clear subscription when tenant changes
+  formData.subscriptionId = ''
+  selectedSubscription.value = null
   if (formData.meterProfileId) {
     fetchAvailableDevices()
   }
@@ -217,15 +194,9 @@ const getDeviceIdentifier = (device: Device): string => {
   return device.serialNumber
 }
 
-// Get subscription display name
-const getSubscriptionLabel = (sub: Subscription): string => {
-  const customerName = sub.customer?.details?.firstName 
-    ? `${sub.customer.details.firstName} ${sub.customer.details.lastName || ''}`
-    : sub.customer?.details?.organizationName || 'N/A'
-  const address = sub.address?.city 
-    ? `${sub.address.city}, ${sub.address.district || ''}`
-    : ''
-  return `${customerName} - ${address || 'No address'}`
+// Handle subscription selection from dialog
+const handleSubscriptionSelect = (subscription: Subscription | null) => {
+  selectedSubscription.value = subscription
 }
 
 // Validate current step
@@ -386,10 +357,12 @@ onMounted(() => {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <UiLabel :error="!!errors.tenantId">Tenant *</UiLabel>
-            <UiSelect
+            <SearchableSelect
               v-model="formData.tenantId"
               :options="tenants.map(t => ({ label: t.name, value: t.id }))"
               placeholder="Select tenant"
+              search-placeholder="Search tenants..."
+              empty-text="No tenants found"
               :error="!!errors.tenantId"
               :disabled="isEditMode"
             />
@@ -401,18 +374,11 @@ onMounted(() => {
           
           <div>
             <UiLabel :error="!!errors.subscriptionId">Subscription (Service Point)</UiLabel>
-            <UiSelect
+            <SubscriptionsSelectDialog
               v-model="formData.subscriptionId"
-              :options="[
-                { label: '-- No Subscription (Warehouse Stock) --', value: '' },
-                ...subscriptions.map(s => ({ 
-                  label: getSubscriptionLabel(s), 
-                  value: s.id 
-                }))
-              ]"
-              placeholder="Select subscription (optional)"
-              :error="!!errors.subscriptionId"
-              :disabled="!formData.tenantId"
+              :tenant-id="formData.tenantId"
+              :disabled="isEditMode"
+              @select="handleSubscriptionSelect"
             />
             <p v-if="errors.subscriptionId" class="text-xs text-destructive mt-1">{{ errors.subscriptionId }}</p>
             <p v-else class="text-xs text-muted-foreground mt-1">
@@ -422,10 +388,16 @@ onMounted(() => {
           
           <div>
             <UiLabel :error="!!errors.meterProfileId">Meter Profile *</UiLabel>
-            <UiSelect
+            <SearchableSelect
               v-model="formData.meterProfileId"
-              :options="meterProfiles.map(p => ({ label: `${p.brand} ${p.modelCode}`, value: p.id }))"
+              :options="meterProfiles.map(p => ({ 
+                label: `${p.brand} ${p.modelCode}`, 
+                value: p.id,
+                description: `${p.meterType?.replace(/_/g, ' ')} • ${p.communicationModule}`
+              }))"
               placeholder="Select profile"
+              search-placeholder="Search by brand, model..."
+              empty-text="No profiles found"
               :error="!!errors.meterProfileId"
             />
             <p v-if="errors.meterProfileId" class="text-xs text-destructive mt-1">{{ errors.meterProfileId }}</p>
@@ -457,10 +429,12 @@ onMounted(() => {
           
           <div>
             <UiLabel :error="!!errors.status">Status *</UiLabel>
-            <UiSelect
+            <SearchableSelect
               v-model="formData.status"
               :options="statusOptions"
               placeholder="Select status"
+              search-placeholder="Search status..."
+              empty-text="No status found"
               :error="!!errors.status"
             />
           </div>
@@ -601,13 +575,16 @@ onMounted(() => {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <UiLabel :error="!!errors.newDeviceProfile">Device Profile *</UiLabel>
-              <UiSelect
+              <SearchableSelect
                 v-model="formData.newDevice.deviceProfileId"
                 :options="deviceProfiles.map(p => ({ 
-                  label: `${p.brand} ${p.modelCode} (${p.communicationTechnology?.replace(/_/g, '-')})`, 
-                  value: p.id 
+                  label: `${p.brand} ${p.modelCode}`, 
+                  value: p.id,
+                  description: p.communicationTechnology?.replace(/_/g, '-')
                 }))"
                 placeholder="Select device profile"
+                search-placeholder="Search device profiles..."
+                empty-text="No device profiles found"
                 :error="!!errors.newDeviceProfile"
               />
               <p v-if="errors.newDeviceProfile" class="text-xs text-destructive mt-1">{{ errors.newDeviceProfile }}</p>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Plus, Trash2, Shield, ChevronDown, ChevronRight } from 'lucide-vue-next'
 import { SystemRole, Module, type User, type Tenant } from '~/types'
+import { SearchableSelect } from '~/components/ui/searchable-select'
 
 const props = defineProps<{
   user?: User
@@ -447,10 +448,12 @@ onMounted(() => {
               <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <UiLabel :error="!!errors[`tenant_${index}`]">Tenant *</UiLabel>
-                  <UiSelect
+                  <SearchableSelect
                     v-model="assignment.tenantId"
                     :options="tenants.map(t => ({ label: t.name, value: t.id }))"
                     placeholder="Select tenant"
+                    search-placeholder="Search tenants..."
+                    empty-text="No tenants found"
                     :error="!!errors[`tenant_${index}`]"
                   />
                   <p v-if="errors[`tenant_${index}`]" class="text-xs text-destructive mt-1">
@@ -460,10 +463,12 @@ onMounted(() => {
                 
                 <div>
                   <UiLabel>Role *</UiLabel>
-                  <UiSelect
+                  <SearchableSelect
                     v-model="assignment.role"
                     :options="roleOptions"
                     placeholder="Select role"
+                    search-placeholder="Search roles..."
+                    empty-text="No roles available"
                   />
                 </div>
               </div>

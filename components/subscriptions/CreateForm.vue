@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { SubscriptionType, SubscriptionGroup, type Subscription, type Customer } from '~/types'
+import { SearchableSelect } from '~/components/ui/searchable-select'
 
 const props = defineProps<{
   subscription?: Subscription
@@ -173,10 +174,12 @@ const handleSubmit = async () => {
       
       <div class="space-y-2">
         <UiLabel>Select Tenant *</UiLabel>
-        <UiSelect 
+        <SearchableSelect 
           v-model="form.tenantId" 
           :options="tenantOptions"
           placeholder="Select a tenant..."
+          search-placeholder="Search tenants..."
+          empty-text="No tenants found"
         />
       </div>
     </div>
@@ -203,11 +206,13 @@ const handleSubmit = async () => {
       
       <div class="space-y-2">
         <UiLabel>Select Customer *</UiLabel>
-        <UiSelect 
+        <SearchableSelect 
           v-model="form.customerId" 
           :options="customerOptions"
           :disabled="isLoadingCustomers || !form.tenantId"
           :placeholder="!form.tenantId ? 'Select a tenant first...' : (isLoadingCustomers ? 'Loading customers...' : 'Select a customer...')"
+          search-placeholder="Search customers..."
+          empty-text="No customers found"
         />
         <p v-if="form.tenantId && !isLoadingCustomers && customerOptions.length === 0" class="text-sm text-muted-foreground">
           No customers found for this tenant. Create a customer first.
@@ -219,19 +224,23 @@ const handleSubmit = async () => {
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-2">
         <UiLabel>Subscription Type *</UiLabel>
-        <UiSelect 
+        <SearchableSelect 
           v-model="form.subscriptionType"
           :options="subscriptionTypeOptions"
           placeholder="Select type"
+          search-placeholder="Search..."
+          empty-text="No types available"
         />
       </div>
       
       <div class="space-y-2">
         <UiLabel>Consumption Group</UiLabel>
-        <UiSelect 
+        <SearchableSelect 
           v-model="form.subscriptionGroup"
           :options="subscriptionGroupOptions"
           placeholder="Select group"
+          search-placeholder="Search..."
+          empty-text="No groups available"
         />
       </div>
     </div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Plus, Trash2 } from 'lucide-vue-next'
 import type { Tenant, MeterProfile, DeviceProfile } from '~/types'
+import { SearchableSelect } from '~/components/ui/searchable-select'
 
 const props = defineProps<{
   tenant?: Tenant
@@ -214,10 +215,12 @@ onMounted(() => {
           
           <div class="md:col-span-2" v-if="!isEditMode">
             <UiLabel>Parent Tenant</UiLabel>
-            <UiSelect
+            <SearchableSelect
               v-model="formData.parentId"
               :options="[{ label: 'None (Root Tenant)', value: '' }, ...tenants.map(t => ({ label: t.name, value: t.id }))]"
               placeholder="Select parent tenant"
+              search-placeholder="Search tenants..."
+              empty-text="No tenants found"
             />
             <p class="text-xs text-muted-foreground mt-1">
               Leave empty to create a root-level tenant
@@ -226,17 +229,23 @@ onMounted(() => {
           
           <div>
             <UiLabel>Subscription Status</UiLabel>
-            <UiSelect
+            <SearchableSelect
               v-model="formData.tenantSubscriptionStatus"
               :options="subscriptionStatusOptions"
+              placeholder="Select status"
+              search-placeholder="Search..."
+              empty-text="No status available"
             />
           </div>
           
           <div>
             <UiLabel>Subscription Plan</UiLabel>
-            <UiSelect
+            <SearchableSelect
               v-model="formData.subscriptionPlan"
               :options="subscriptionPlanOptions"
+              placeholder="Select plan"
+              search-placeholder="Search..."
+              empty-text="No plans available"
             />
           </div>
         </div>
