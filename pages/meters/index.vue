@@ -127,7 +127,7 @@ const goToMeter = (id: string) => {
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <UiInput
             v-model="searchQuery"
-            placeholder="Search by serial number, device ID..."
+            placeholder="Search by serial number, module ID..."
             class="pl-10"
           />
         </div>

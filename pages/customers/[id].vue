@@ -14,7 +14,7 @@ import {
   Briefcase,
   FileText,
 } from 'lucide-vue-next'
-import { CustomerType, type Customer, type Subscription } from '~/types'
+import { CustomerType, type Customer, type Subscription, type Tenant } from '~/types'
 
 definePageMeta({
   middleware: ['auth'],
@@ -29,6 +29,7 @@ const customerId = computed(() => route.params.id as string)
 
 // State
 const customer = ref<Customer | null>(null)
+const tenant = ref<Tenant | null>(null)
 const subscriptions = ref<Subscription[]>([])
 const isLoading = ref(true)
 const isLoadingSubscriptions = ref(true)
@@ -53,11 +54,25 @@ const fetchCustomer = async () => {
   try {
     const response = await api.get<Customer>(`/api/v1/customers/${customerId.value}`)
     customer.value = response
+    // Fetch tenant details
+    if (response.tenantId) {
+      fetchTenant(response.tenantId)
+    }
   } catch (error) {
     toast.error('Failed to load customer')
     router.push('/customers')
   } finally {
     isLoading.value = false
+  }
+}
+
+// Fetch tenant details
+const fetchTenant = async (tenantId: string) => {
+  try {
+    const response = await api.get<Tenant>(`/api/v1/tenants/${tenantId}`)
+    tenant.value = response
+  } catch (error) {
+    console.error('Failed to fetch tenant:', error)
   }
 }
 
@@ -165,10 +180,6 @@ const handleEditSuccess = () => {
             <span>•</span>
             <UiBadge variant="outline">
               {{ isIndividual ? 'Individual' : 'Organizational' }}
-            </UiBadge>
-            <span>•</span>
-            <UiBadge :variant="customer.consumptionType === 'HIGH' ? 'destructive' : 'secondary'">
-              {{ customer.consumptionType }} Consumption
             </UiBadge>
           </div>
         </template>
@@ -368,8 +379,18 @@ const handleEditSuccess = () => {
           </UiCardHeader>
           <UiCardContent class="space-y-4">
             <div>
-              <p class="text-sm text-muted-foreground">Tenant ID</p>
-              <p class="font-mono text-sm">{{ customer.tenantId }}</p>
+              <p class="text-sm text-muted-foreground">Tenant Name</p>
+              <p class="font-medium text-lg">{{ tenant?.name || 'Loading...' }}</p>
+            </div>
+            
+            <div v-if="tenant?.path">
+              <p class="text-sm text-muted-foreground">Path</p>
+              <p class="font-mono text-xs">{{ tenant.path }}</p>
+            </div>
+            
+            <div v-if="tenant?.contactEmail">
+              <p class="text-sm text-muted-foreground">Contact</p>
+              <p class="text-sm">{{ tenant.contactEmail }}</p>
             </div>
             
             <UiButton
@@ -401,8 +422,7 @@ const handleEditSuccess = () => {
             <UiTableRow>
               <UiTableHead>Subscription No</UiTableHead>
               <UiTableHead>Address</UiTableHead>
-              <UiTableHead>Type</UiTableHead>
-              <UiTableHead>Group</UiTableHead>
+              <UiTableHead>Consumption Group</UiTableHead>
               <UiTableHead>Status</UiTableHead>
               <UiTableHead>Meters</UiTableHead>
               <UiTableHead>Start Date</UiTableHead>
@@ -411,7 +431,7 @@ const handleEditSuccess = () => {
           <UiTableBody>
             <template v-if="isLoadingSubscriptions">
               <UiTableRow v-for="i in 3" :key="i">
-                <UiTableCell v-for="j in 7" :key="j">
+                <UiTableCell v-for="j in 6" :key="j">
                   <UiSkeleton class="h-4 w-full" />
                 </UiTableCell>
               </UiTableRow>
@@ -419,7 +439,7 @@ const handleEditSuccess = () => {
             
             <template v-else-if="subscriptions.length === 0">
               <UiTableRow>
-                <UiTableCell :colspan="7" class="text-center py-8 text-muted-foreground">
+                <UiTableCell :colspan="6" class="text-center py-8 text-muted-foreground">
                   <FileText class="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>No subscriptions for this customer</p>
                   <p class="text-sm">Create a subscription to link meters</p>
@@ -444,13 +464,8 @@ const handleEditSuccess = () => {
                   </div>
                 </UiTableCell>
                 <UiTableCell>
-                  <UiBadge variant="outline">
-                    {{ subscription.subscriptionType }}
-                  </UiBadge>
-                </UiTableCell>
-                <UiTableCell>
-                  <UiBadge :variant="subscription.subscriptionGroup === 'HIGH_CONSUMPTION' ? 'destructive' : 'secondary'">
-                    {{ subscription.subscriptionGroup?.replace(/_/g, ' ') }}
+                  <UiBadge :variant="subscription.consumptionGroup === 'HIGH_CONSUMPTION' ? 'destructive' : 'secondary'">
+                    {{ subscription.consumptionGroup?.replace(/_/g, ' ') || 'Normal' }}
                   </UiBadge>
                 </UiTableCell>
                 <UiTableCell>
@@ -470,22 +485,13 @@ const handleEditSuccess = () => {
         </UiTable>
       </UiCard>
       
-      <!-- Consumption History Chart Placeholder -->
-      <UiCard>
-        <UiCardHeader>
-          <UiCardTitle>Consumption History</UiCardTitle>
-          <UiCardDescription>Water usage over time across all subscriptions</UiCardDescription>
-        </UiCardHeader>
-        <UiCardContent>
-          <div class="h-64 flex items-center justify-center text-muted-foreground border border-dashed border-border rounded-lg">
-            <div class="text-center">
-              <TrendingUp class="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>Consumption chart will be displayed here</p>
-              <p class="text-sm">Using ApexCharts</p>
-            </div>
-          </div>
-        </UiCardContent>
-      </UiCard>
+      <!-- Consumption History Chart -->
+      <ConsumptionAnalysis
+        source-type="customer"
+        :source-id="customerId"
+        title="Consumption History"
+        description="Water usage over time across all subscriptions"
+      />
     </template>
     
     <!-- Edit Dialog -->

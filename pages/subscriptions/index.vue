@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FileText, Plus, Search, MapPin, User, Building2 } from 'lucide-vue-next'
+import { FileText, Plus, Search, MapPin } from 'lucide-vue-next'
 import type { Subscription, PaginatedResponse } from '~/types'
 
 definePageMeta({
@@ -129,7 +129,6 @@ const getCustomerId = (subscription: Subscription): string => {
         <UiTableHeader>
           <UiTableRow>
             <UiTableHead>Subscription No</UiTableHead>
-            <UiTableHead>Type</UiTableHead>
             <UiTableHead>Customer</UiTableHead>
             <UiTableHead>Address</UiTableHead>
             <UiTableHead>Group</UiTableHead>
@@ -140,7 +139,7 @@ const getCustomerId = (subscription: Subscription): string => {
         <UiTableBody>
           <template v-if="isLoading">
             <UiTableRow v-for="i in 10" :key="i">
-              <UiTableCell v-for="j in 8" :key="j">
+              <UiTableCell v-for="j in 6" :key="j">
                 <UiSkeleton class="h-4 w-full" />
               </UiTableCell>
             </UiTableRow>
@@ -148,7 +147,7 @@ const getCustomerId = (subscription: Subscription): string => {
           
           <template v-else-if="subscriptions.length === 0">
             <UiTableRow>
-              <UiTableCell :colspan="8" class="text-center py-12 text-muted-foreground">
+              <UiTableCell :colspan="6" class="text-center py-12 text-muted-foreground">
                 <FileText class="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p class="font-medium">No subscriptions found</p>
                 <p class="text-sm">Add a new subscription to get started</p>
@@ -165,13 +164,6 @@ const getCustomerId = (subscription: Subscription): string => {
             >
               <UiTableCell class="font-mono text-sm font-medium">
                 {{ subscription.subscriptionNumber }}
-              </UiTableCell>
-              <UiTableCell>
-                <div class="flex items-center gap-2">
-                  <User v-if="subscription.subscriptionType === 'INDIVIDUAL'" class="h-4 w-4 text-muted-foreground" />
-                  <Building2 v-else class="h-4 w-4 text-muted-foreground" />
-                  <span class="text-xs">{{ subscription.subscriptionType }}</span>
-                </div>
               </UiTableCell>
               <UiTableCell class="font-medium">
                 {{ getCustomerName(subscription) }}

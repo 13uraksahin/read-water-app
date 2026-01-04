@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Search, MapPin, User, Building2, FileText, Check, X } from 'lucide-vue-next'
+import { Search, MapPin, FileText, Check, X } from 'lucide-vue-next'
 import type { Subscription } from '~/types'
 
 interface Props {
@@ -196,7 +196,6 @@ const displayLabel = computed(() => {
               <UiTableRow>
                 <UiTableHead class="w-8"></UiTableHead>
                 <UiTableHead>Subscription No</UiTableHead>
-                <UiTableHead>Type</UiTableHead>
                 <UiTableHead>Customer</UiTableHead>
                 <UiTableHead>Address</UiTableHead>
                 <UiTableHead>Group</UiTableHead>
@@ -239,13 +238,6 @@ const displayLabel = computed(() => {
                   </UiTableCell>
                   <UiTableCell class="font-mono text-sm font-medium">
                     {{ subscription.subscriptionNumber }}
-                  </UiTableCell>
-                  <UiTableCell>
-                    <div class="flex items-center gap-2">
-                      <User v-if="subscription.subscriptionType === 'INDIVIDUAL'" class="h-4 w-4 text-muted-foreground" />
-                      <Building2 v-else class="h-4 w-4 text-muted-foreground" />
-                      <span class="text-xs">{{ subscription.subscriptionType }}</span>
-                    </div>
                   </UiTableCell>
                   <UiTableCell class="font-medium">
                     {{ getCustomerName(subscription) }}

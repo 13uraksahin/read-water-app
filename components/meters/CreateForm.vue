@@ -2,12 +2,12 @@
 import { Radio, Plus, Warehouse, Link2 } from 'lucide-vue-next'
 import {
   MeterStatus,
-  DeviceStatus,
+  ModuleStatus,
   type MeterProfile,
   type Subscription,
   type Tenant,
-  type Device,
-  type DeviceProfile,
+  type Module,
+  type ModuleProfile,
   type Meter,
   COMMUNICATION_TECH_FIELDS,
 } from '~/types'
@@ -38,8 +38,8 @@ const isEditMode = computed(() => props.mode === 'edit')
 // Lookups
 const tenants = ref<Tenant[]>([])
 const meterProfiles = ref<MeterProfile[]>([])
-const availableDevices = ref<Device[]>([])
-const deviceProfiles = ref<DeviceProfile[]>([])
+const availableModules = ref<Module[]>([])
+const moduleProfiles = ref<ModuleProfile[]>([])
 
 // Form data - Updated for Subscription model
 const formData = reactive({
@@ -54,12 +54,12 @@ const formData = reactive({
     ? new Date(props.meter.installationDate).toISOString().slice(0, 16) 
     : new Date().toISOString().slice(0, 16),
   
-  // Step 2: Device Configuration
-  deviceOption: 'none' as 'none' | 'select' | 'create',
-  selectedDeviceId: props.meter?.activeDeviceId || '',
-  // For inline device creation
-  newDevice: {
-    deviceProfileId: '',
+  // Step 2: Module Configuration
+  moduleOption: 'none' as 'none' | 'select' | 'create',
+  selectedModuleId: props.meter?.activeModuleId || '',
+  // For inline module creation
+  newModule: {
+    moduleProfileId: '',
     serialNumber: '',
     dynamicFields: {} as Record<string, string>,
   },
@@ -71,11 +71,11 @@ const errors = reactive<Record<string, string>>({})
 // Options
 const statusOptions = Object.values(MeterStatus).map(s => ({ label: s.replace(/_/g, ' '), value: s }))
 
-// Device options for display
-const deviceOptions = [
-  { value: 'none', label: 'None (Mechanical Only)', description: 'Create meter without communication device' },
-  { value: 'select', label: 'Select from Inventory', description: 'Choose an available device from warehouse' },
-  { value: 'create', label: 'Create New Device', description: 'Register a new device inline' },
+// Module options for display
+const moduleOptions = [
+  { value: 'none', label: 'None (Mechanical Only)', description: 'Create meter without communication module' },
+  { value: 'select', label: 'Select from Warehouse', description: 'Choose an available module from warehouse' },
+  { value: 'create', label: 'Create New Module', description: 'Register a new module inline' },
 ]
 
 // Selected meter profile
@@ -86,20 +86,20 @@ const selectedMeterProfile = computed(() => {
 // Selected subscription (tracked via SubscriptionSelectDialog)
 const selectedSubscription = ref<Subscription | null>(null)
 
-// Selected device profile for new device
-const selectedDeviceProfile = computed(() => {
-  return deviceProfiles.value.find(p => p.id === formData.newDevice.deviceProfileId)
+// Selected module profile for new module
+const selectedModuleProfile = computed(() => {
+  return moduleProfiles.value.find(p => p.id === formData.newModule.moduleProfileId)
 })
 
-// Field definitions for new device
-const newDeviceFieldDefs = computed(() => {
-  if (!selectedDeviceProfile.value) return []
+// Field definitions for new module
+const newModuleFieldDefs = computed(() => {
+  if (!selectedModuleProfile.value) return []
   
-  if (selectedDeviceProfile.value.fieldDefinitions?.length) {
-    return selectedDeviceProfile.value.fieldDefinitions
+  if (selectedModuleProfile.value.fieldDefinitions?.length) {
+    return selectedModuleProfile.value.fieldDefinitions
   }
   
-  const tech = selectedDeviceProfile.value.communicationTechnology
+  const tech = selectedModuleProfile.value.communicationTechnology
   if (tech && COMMUNICATION_TECH_FIELDS[tech]) {
     return COMMUNICATION_TECH_FIELDS[tech]
   }
@@ -107,11 +107,11 @@ const newDeviceFieldDefs = computed(() => {
   return []
 })
 
-// Watch device profile changes for new device
-watch(() => formData.newDevice.deviceProfileId, () => {
-  formData.newDevice.dynamicFields = {}
-  newDeviceFieldDefs.value.forEach(def => {
-    formData.newDevice.dynamicFields[def.name] = ''
+// Watch module profile changes for new module
+watch(() => formData.newModule.moduleProfileId, () => {
+  formData.newModule.dynamicFields = {}
+  newModuleFieldDefs.value.forEach(def => {
+    formData.newModule.dynamicFields[def.name] = ''
   })
 })
 
@@ -119,15 +119,15 @@ watch(() => formData.newDevice.deviceProfileId, () => {
 const fetchLookups = async () => {
   isLoading.value = true
   try {
-    const [tenantsRes, profilesRes, deviceProfilesRes] = await Promise.all([
+    const [tenantsRes, profilesRes, moduleProfilesRes] = await Promise.all([
       api.getList<Tenant>('/api/v1/tenants', { limit: 100 }),
       api.getList<MeterProfile>('/api/v1/profiles', { limit: 100 }),
-      api.getList<DeviceProfile>('/api/v1/device-profiles', { limit: 100 }),
+      api.getList<ModuleProfile>('/api/v1/module-profiles', { limit: 100 }),
     ])
     
     tenants.value = tenantsRes.data
     meterProfiles.value = profilesRes.data
-    deviceProfiles.value = deviceProfilesRes.data
+    moduleProfiles.value = moduleProfilesRes.data
     
     // Set default tenant if only one
     if (!isEditMode.value && tenants.value.length === 1 && tenants.value[0]) {
@@ -140,30 +140,30 @@ const fetchLookups = async () => {
   }
 }
 
-// Fetch available devices for inventory selection
-const fetchAvailableDevices = async () => {
+// Fetch available modules for warehouse selection
+const fetchAvailableModules = async () => {
   if (!formData.tenantId || !formData.meterProfileId) {
-    availableDevices.value = []
+    availableModules.value = []
     return
   }
   
   try {
-    const response = await api.get<Device[]>(
-      `/api/v1/devices/available?tenantId=${formData.tenantId}&meterProfileId=${formData.meterProfileId}`
+    const response = await api.get<Module[]>(
+      `/api/v1/modules/available?tenantId=${formData.tenantId}&meterProfileId=${formData.meterProfileId}`
     )
-    availableDevices.value = response
+    availableModules.value = response
   } catch (error) {
-    console.error('Failed to fetch available devices:', error)
-    // Fallback: fetch all warehouse devices for tenant
+    console.error('Failed to fetch available modules:', error)
+    // Fallback: fetch all warehouse modules for tenant
     try {
-      const response = await api.getList<Device>('/api/v1/devices', {
+      const response = await api.getList<Module>('/api/v1/modules', {
         tenantId: formData.tenantId,
-        status: DeviceStatus.WAREHOUSE,
+        status: ModuleStatus.WAREHOUSE,
         limit: 100,
       })
-      availableDevices.value = response.data
+      availableModules.value = response.data
     } catch {
-      availableDevices.value = []
+      availableModules.value = []
     }
   }
 }
@@ -174,24 +174,24 @@ watch(() => formData.tenantId, () => {
   formData.subscriptionId = ''
   selectedSubscription.value = null
   if (formData.meterProfileId) {
-    fetchAvailableDevices()
+    fetchAvailableModules()
   }
 })
 
 watch(() => formData.meterProfileId, () => {
   if (formData.tenantId) {
-    fetchAvailableDevices()
+    fetchAvailableModules()
   }
 })
 
-// Get device identifier for display
-const getDeviceIdentifier = (device: Device): string => {
-  if (!device.dynamicFields) return device.serialNumber
+// Get module identifier for display
+const getModuleIdentifier = (module: Module): string => {
+  if (!module.dynamicFields) return module.serialNumber
   const identifiers = ['DevEUI', 'ID', 'IMEI', 'MacAddress']
   for (const key of identifiers) {
-    if (device.dynamicFields[key]) return device.dynamicFields[key]
+    if (module.dynamicFields[key]) return module.dynamicFields[key]
   }
-  return device.serialNumber
+  return module.serialNumber
 }
 
 // Handle subscription selection from dialog
@@ -212,18 +212,18 @@ const validateStep = (step: number): boolean => {
     if (!formData.status) errors.status = 'Status is required'
   }
   
-  if (step === 2 && formData.deviceOption === 'create') {
-    if (!formData.newDevice.deviceProfileId) {
-      errors.newDeviceProfile = 'Device profile is required'
+  if (step === 2 && formData.moduleOption === 'create') {
+    if (!formData.newModule.moduleProfileId) {
+      errors.newModuleProfile = 'Module profile is required'
     }
-    if (!formData.newDevice.serialNumber) {
-      errors.newDeviceSerial = 'Device serial number is required'
+    if (!formData.newModule.serialNumber) {
+      errors.newModuleSerial = 'Module serial number is required'
     }
     // Validate dynamic fields
-    newDeviceFieldDefs.value.forEach(def => {
-      const value = formData.newDevice.dynamicFields[def.name] || ''
+    newModuleFieldDefs.value.forEach(def => {
+      const value = formData.newModule.dynamicFields[def.name] || ''
       if (def.required && !value) {
-        errors[`device_field_${def.name}`] = `${def.label || def.name} is required`
+        errors[`module_field_${def.name}`] = `${def.label || def.name} is required`
       }
     })
   }
@@ -280,31 +280,31 @@ const handleSubmit = async () => {
       toast.success('Meter created successfully')
     }
     
-    // Handle device linking if needed (only on create or if device option changed)
-    if (!isEditMode.value && formData.deviceOption !== 'none') {
-      if (formData.deviceOption === 'select' && formData.selectedDeviceId) {
-        // Link existing device
-        await api.post(`/api/v1/meters/${meterId}/link-device`, {
-          deviceId: formData.selectedDeviceId,
+    // Handle module linking if needed (only on create or if module option changed)
+    if (!isEditMode.value && formData.moduleOption !== 'none') {
+      if (formData.moduleOption === 'select' && formData.selectedModuleId) {
+        // Link existing module
+        await api.post(`/api/v1/meters/${meterId}/link-module`, {
+          moduleId: formData.selectedModuleId,
         })
-        toast.success('Device linked to meter')
-      } else if (formData.deviceOption === 'create') {
-        // Create new device first
-        const devicePayload = {
+        toast.success('Module linked to meter')
+      } else if (formData.moduleOption === 'create') {
+        // Create new module first
+        const modulePayload = {
           tenantId: formData.tenantId,
-          deviceProfileId: formData.newDevice.deviceProfileId,
-          serialNumber: formData.newDevice.serialNumber,
-          status: DeviceStatus.WAREHOUSE,
-          dynamicFields: formData.newDevice.dynamicFields,
+          moduleProfileId: formData.newModule.moduleProfileId,
+          serialNumber: formData.newModule.serialNumber,
+          status: ModuleStatus.WAREHOUSE,
+          dynamicFields: formData.newModule.dynamicFields,
         }
         
-        const deviceResponse = await api.post<{ id: string }>('/api/v1/devices', devicePayload)
+        const moduleResponse = await api.post<{ id: string }>('/api/v1/modules', modulePayload)
         
         // Then link it
-        await api.post(`/api/v1/meters/${meterId}/link-device`, {
-          deviceId: deviceResponse.id,
+        await api.post(`/api/v1/meters/${meterId}/link-module`, {
+          moduleId: moduleResponse.id,
         })
-        toast.success('Device created and linked to meter')
+        toast.success('Module created and linked to meter')
       }
     }
     
@@ -382,7 +382,7 @@ onMounted(() => {
             />
             <p v-if="errors.subscriptionId" class="text-xs text-destructive mt-1">{{ errors.subscriptionId }}</p>
             <p v-else class="text-xs text-muted-foreground mt-1">
-              Optional. Leave empty to add meter to warehouse inventory.
+              Optional. Leave empty to add meter to warehouse.
             </p>
           </div>
           
@@ -481,39 +481,39 @@ onMounted(() => {
         <div v-else-if="formData.tenantId && !formData.subscriptionId" class="p-4 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800">
           <p class="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">Warehouse Stock</p>
           <p class="text-sm text-amber-700 dark:text-amber-300">
-            This meter will be added to inventory without a service point. You can link it to a subscription later.
+            This meter will be added to the warehouse without a service point. You can link it to a subscription later.
           </p>
         </div>
       </div>
       
-      <!-- Step 2: Device Configuration -->
+      <!-- Step 2: Module Configuration -->
       <div v-show="currentStep === 2" class="space-y-6">
         <div>
           <h3 class="font-medium text-lg flex items-center gap-2">
             <Radio class="h-5 w-5" />
-            Device Configuration
+            Module Configuration
           </h3>
           <p class="text-sm text-muted-foreground mt-1">
-            Configure the communication device for this meter (optional)
+            Configure the communication module for this meter (optional)
           </p>
         </div>
         
-        <!-- Device Option Selection -->
+        <!-- Module Option Selection -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div
-            v-for="option in deviceOptions"
+            v-for="option in moduleOptions"
             :key="option.value"
             class="p-4 rounded-lg border-2 cursor-pointer transition-colors"
-            :class="formData.deviceOption === option.value 
+            :class="formData.moduleOption === option.value 
               ? 'border-primary bg-primary/5' 
               : 'border-border hover:border-primary/50'"
-            @click="formData.deviceOption = option.value as typeof formData.deviceOption"
+            @click="formData.moduleOption = option.value as typeof formData.moduleOption"
           >
             <div class="flex items-center gap-3 mb-2">
               <component
                 :is="option.value === 'none' ? 'div' : option.value === 'select' ? Warehouse : Plus"
                 class="h-5 w-5"
-                :class="formData.deviceOption === option.value ? 'text-primary' : 'text-muted-foreground'"
+                :class="formData.moduleOption === option.value ? 'text-primary' : 'text-muted-foreground'"
               />
               <span class="font-medium">{{ option.label }}</span>
             </div>
@@ -521,42 +521,42 @@ onMounted(() => {
           </div>
         </div>
         
-        <!-- Select from Inventory -->
-        <div v-if="formData.deviceOption === 'select'" class="space-y-4 p-4 rounded-lg border border-border">
+        <!-- Select from Warehouse -->
+        <div v-if="formData.moduleOption === 'select'" class="space-y-4 p-4 rounded-lg border border-border">
           <h4 class="font-medium flex items-center gap-2">
             <Warehouse class="h-4 w-4" />
-            Select Device from Inventory
+            Select Module from Warehouse
           </h4>
           
-          <div v-if="availableDevices.length === 0" class="text-center py-8 text-muted-foreground">
+          <div v-if="availableModules.length === 0" class="text-center py-8 text-muted-foreground">
             <Warehouse class="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>No available devices in warehouse</p>
+            <p>No available modules in warehouse</p>
             <p class="text-sm">Make sure you've selected a tenant and meter profile</p>
           </div>
           
           <div v-else class="space-y-2">
-            <UiLabel>Available Devices</UiLabel>
+            <UiLabel>Available Modules</UiLabel>
             <div class="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
               <div
-                v-for="device in availableDevices"
-                :key="device.id"
+                v-for="module in availableModules"
+                :key="module.id"
                 class="p-3 rounded-lg border cursor-pointer transition-colors"
-                :class="formData.selectedDeviceId === device.id 
+                :class="formData.selectedModuleId === module.id 
                   ? 'border-primary bg-primary/5' 
                   : 'border-border hover:border-primary/50'"
-                @click="formData.selectedDeviceId = device.id"
+                @click="formData.selectedModuleId = module.id"
               >
                 <div class="flex items-center justify-between">
                   <div>
-                    <p class="font-medium font-mono">{{ device.serialNumber }}</p>
-                    <p class="text-xs text-muted-foreground">{{ getDeviceIdentifier(device) }}</p>
+                    <p class="font-medium font-mono">{{ module.serialNumber }}</p>
+                    <p class="text-xs text-muted-foreground">{{ getModuleIdentifier(module) }}</p>
                   </div>
                   <div class="text-right">
                     <UiBadge variant="outline" class="text-xs">
-                      {{ device.deviceProfile?.brand }} {{ device.deviceProfile?.modelCode }}
+                      {{ module.moduleProfile?.brand }} {{ module.moduleProfile?.modelCode }}
                     </UiBadge>
                     <p class="text-xs text-muted-foreground mt-1">
-                      {{ device.deviceProfile?.communicationTechnology?.replace(/_/g, '-') }}
+                      {{ module.moduleProfile?.communicationTechnology?.replace(/_/g, '-') }}
                     </p>
                   </div>
                 </div>
@@ -565,61 +565,61 @@ onMounted(() => {
           </div>
         </div>
         
-        <!-- Create New Device -->
-        <div v-if="formData.deviceOption === 'create'" class="space-y-4 p-4 rounded-lg border border-border">
+        <!-- Create New Module -->
+        <div v-if="formData.moduleOption === 'create'" class="space-y-4 p-4 rounded-lg border border-border">
           <h4 class="font-medium flex items-center gap-2">
             <Plus class="h-4 w-4" />
-            Create New Device
+            Create New Module
           </h4>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <UiLabel :error="!!errors.newDeviceProfile">Device Profile *</UiLabel>
+              <UiLabel :error="!!errors.newModuleProfile">Module Profile *</UiLabel>
               <SearchableSelect
-                v-model="formData.newDevice.deviceProfileId"
-                :options="deviceProfiles.map(p => ({ 
+                v-model="formData.newModule.moduleProfileId"
+                :options="moduleProfiles.map(p => ({ 
                   label: `${p.brand} ${p.modelCode}`, 
                   value: p.id,
                   description: p.communicationTechnology?.replace(/_/g, '-')
                 }))"
-                placeholder="Select device profile"
-                search-placeholder="Search device profiles..."
-                empty-text="No device profiles found"
-                :error="!!errors.newDeviceProfile"
+                placeholder="Select module profile"
+                search-placeholder="Search module profiles..."
+                empty-text="No module profiles found"
+                :error="!!errors.newModuleProfile"
               />
-              <p v-if="errors.newDeviceProfile" class="text-xs text-destructive mt-1">{{ errors.newDeviceProfile }}</p>
+              <p v-if="errors.newModuleProfile" class="text-xs text-destructive mt-1">{{ errors.newModuleProfile }}</p>
             </div>
             
             <div>
-              <UiLabel :error="!!errors.newDeviceSerial">Device Serial Number *</UiLabel>
+              <UiLabel :error="!!errors.newModuleSerial">Module Serial Number *</UiLabel>
               <UiInput
-                v-model="formData.newDevice.serialNumber"
-                placeholder="e.g. DEV-001234"
-                :error="!!errors.newDeviceSerial"
+                v-model="formData.newModule.serialNumber"
+                placeholder="e.g. MOD-001234"
+                :error="!!errors.newModuleSerial"
               />
-              <p v-if="errors.newDeviceSerial" class="text-xs text-destructive mt-1">{{ errors.newDeviceSerial }}</p>
+              <p v-if="errors.newModuleSerial" class="text-xs text-destructive mt-1">{{ errors.newModuleSerial }}</p>
             </div>
           </div>
           
-          <!-- Dynamic Fields for New Device -->
-          <div v-if="newDeviceFieldDefs.length > 0" class="space-y-4 pt-4 border-t border-border">
+          <!-- Dynamic Fields for New Module -->
+          <div v-if="newModuleFieldDefs.length > 0" class="space-y-4 pt-4 border-t border-border">
             <p class="text-sm font-medium">Communication Keys</p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div v-for="def in newDeviceFieldDefs" :key="def.name">
-                <UiLabel :error="!!errors[`device_field_${def.name}`]">
+              <div v-for="def in newModuleFieldDefs" :key="def.name">
+                <UiLabel :error="!!errors[`module_field_${def.name}`]">
                   {{ def.label || def.name }}
                   <span v-if="def.required" class="text-destructive">*</span>
                   <span v-if="def.length" class="text-xs text-muted-foreground ml-1">({{ def.length }} chars)</span>
                 </UiLabel>
                 <UiInput
-                  v-model="formData.newDevice.dynamicFields[def.name]"
+                  v-model="formData.newModule.dynamicFields[def.name]"
                   :placeholder="`Enter ${def.label || def.name}`"
-                  :error="!!errors[`device_field_${def.name}`]"
+                  :error="!!errors[`module_field_${def.name}`]"
                   :maxlength="def.length"
                   class="font-mono uppercase"
                 />
-                <p v-if="errors[`device_field_${def.name}`]" class="text-xs text-destructive mt-1">
-                  {{ errors[`device_field_${def.name}`] }}
+                <p v-if="errors[`module_field_${def.name}`]" class="text-xs text-destructive mt-1">
+                  {{ errors[`module_field_${def.name}`] }}
                 </p>
               </div>
             </div>
@@ -629,7 +629,7 @@ onMounted(() => {
         <!-- Edit mode note -->
         <div v-if="isEditMode" class="p-4 rounded-lg bg-muted/50 text-sm text-muted-foreground">
           <p>
-            <strong>Note:</strong> To link or unlink devices, use the device management section on the meter detail page.
+            <strong>Note:</strong> To link or unlink modules, use the module management section on the meter detail page.
           </p>
         </div>
       </div>

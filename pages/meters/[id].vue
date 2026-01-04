@@ -19,8 +19,10 @@ import {
   Warehouse,
   Plus,
   Settings,
+  Navigation,
+  ExternalLink,
 } from 'lucide-vue-next'
-import type { Meter, Reading, Device, DeviceProfile, DeviceStatus, Address } from '~/types'
+import type { Meter, Reading, Module, ModuleProfile, ModuleStatus, Address } from '~/types'
 import { formatDate, formatDateTime, formatWaterUsage } from '~/lib/utils'
 
 definePageMeta({
@@ -37,8 +39,8 @@ const meterId = computed(() => route.params.id as string)
 // State
 const meter = ref<Meter | null>(null)
 const readings = ref<Reading[]>([])
-const availableDevices = ref<Device[]>([])
-const deviceProfiles = ref<DeviceProfile[]>([])
+const availableModules = ref<Module[]>([])
+const moduleProfiles = ref<ModuleProfile[]>([])
 const isLoading = ref(true)
 const isLoadingReadings = ref(true)
 const showEditDialog = ref(false)
@@ -47,11 +49,11 @@ const showUnlinkConfirm = ref(false)
 const isLinking = ref(false)
 const isUnlinking = ref(false)
 
-// Link device form state
+// Link module form state
 const linkMode = ref<'select' | 'create'>('select')
-const selectedDeviceId = ref('')
-const newDevice = reactive({
-  deviceProfileId: '',
+const selectedModuleId = ref('')
+const newModule = reactive({
+  moduleProfileId: '',
   serialNumber: '',
   dynamicFields: {} as Record<string, string>,
 })
@@ -86,37 +88,37 @@ const fetchReadings = async () => {
   }
 }
 
-// Fetch available devices for linking
-const fetchAvailableDevices = async () => {
+// Fetch available modules for linking
+const fetchAvailableModules = async () => {
   if (!meter.value) return
   
   try {
-    const response = await api.get<Device[]>(
-      `/api/v1/devices/available?tenantId=${meter.value.tenantId}&meterProfileId=${meter.value.meterProfileId}`
+    const response = await api.get<Module[]>(
+      `/api/v1/modules/available?tenantId=${meter.value.tenantId}&meterProfileId=${meter.value.meterProfileId}`
     )
-    availableDevices.value = response
+    availableModules.value = response
   } catch {
     // Fallback
     try {
-      const response = await api.getList<Device>('/api/v1/devices', {
+      const response = await api.getList<Module>('/api/v1/modules', {
         tenantId: meter.value.tenantId,
         status: 'WAREHOUSE',
         limit: 100,
       })
-      availableDevices.value = response.data
+      availableModules.value = response.data
     } catch {
-      availableDevices.value = []
+      availableModules.value = []
     }
   }
 }
 
-// Fetch device profiles
-const fetchDeviceProfiles = async () => {
+// Fetch module profiles
+const fetchModuleProfiles = async () => {
   try {
-    const response = await api.getList<DeviceProfile>('/api/v1/device-profiles', { limit: 100 })
-    deviceProfiles.value = response.data
+    const response = await api.getList<ModuleProfile>('/api/v1/module-profiles', { limit: 100 })
+    moduleProfiles.value = response.data
   } catch (error) {
-    console.error('Failed to fetch device profiles:', error)
+    console.error('Failed to fetch module profiles:', error)
   }
 }
 
@@ -166,14 +168,14 @@ const totalConsumption = computed(() => {
   return Number(meter.value.lastReadingValue ?? meter.value.initialIndex ?? 0) - Number(meter.value.initialIndex ?? 0)
 })
 
-// Get device identifier
-const getDeviceIdentifier = (device: Device): string => {
-  if (!device.dynamicFields) return device.serialNumber
+// Get module identifier
+const getModuleIdentifier = (module: Module): string => {
+  if (!module.dynamicFields) return module.serialNumber
   const identifiers = ['DevEUI', 'ID', 'IMEI', 'MacAddress']
   for (const key of identifiers) {
-    if (device.dynamicFields[key]) return device.dynamicFields[key]
+    if (module.dynamicFields[key]) return module.dynamicFields[key]
   }
-  return device.serialNumber
+  return module.serialNumber
 }
 
 // Get battery color
@@ -184,61 +186,61 @@ const getBatteryColor = (level?: number): string => {
   return 'text-red-600'
 }
 
-// Link device
-const handleLinkDevice = async () => {
+// Link module
+const handleLinkModule = async () => {
   if (!meter.value) return
   
   isLinking.value = true
   
   try {
-    let deviceId = selectedDeviceId.value
+    let moduleId = selectedModuleId.value
     
     if (linkMode.value === 'create') {
-      // Create new device first
-      const devicePayload = {
+      // Create new module first
+      const modulePayload = {
         tenantId: meter.value.tenantId,
-        deviceProfileId: newDevice.deviceProfileId,
-        serialNumber: newDevice.serialNumber,
+        moduleProfileId: newModule.moduleProfileId,
+        serialNumber: newModule.serialNumber,
         status: 'WAREHOUSE',
-        dynamicFields: newDevice.dynamicFields,
+        dynamicFields: newModule.dynamicFields,
       }
       
-      const deviceResponse = await api.post<{ id: string }>('/api/v1/devices', devicePayload)
-      deviceId = deviceResponse.id
+      const moduleResponse = await api.post<{ id: string }>('/api/v1/modules', modulePayload)
+      moduleId = moduleResponse.id
     }
     
-    // Link device to meter
-    await api.post(`/api/v1/meters/${meterId.value}/link-device`, { deviceId })
+    // Link module to meter
+    await api.post(`/api/v1/meters/${meterId.value}/link-module`, { moduleId })
     
-    toast.success('Device linked successfully')
+    toast.success('Module linked successfully')
     showLinkDialog.value = false
     resetLinkForm()
     await fetchMeter()
   } catch (error: unknown) {
     const err = error as { message?: string }
-    toast.error('Failed to link device', err.message)
+    toast.error('Failed to link module', err.message)
   } finally {
     isLinking.value = false
   }
 }
 
-// Unlink device
-const handleUnlinkDevice = async () => {
-  if (!meter.value?.activeDevice) return
+// Unlink module
+const handleUnlinkModule = async () => {
+  if (!meter.value?.activeModule) return
   
   isUnlinking.value = true
   
   try {
-    await api.post(`/api/v1/meters/${meterId.value}/unlink-device`, {
-      deviceStatus: 'WAREHOUSE',
+    await api.post(`/api/v1/meters/${meterId.value}/unlink-module`, {
+      moduleStatus: 'WAREHOUSE',
     })
     
-    toast.success('Device unlinked successfully')
+    toast.success('Module unlinked successfully')
     showUnlinkConfirm.value = false
     await fetchMeter()
   } catch (error: unknown) {
     const err = error as { message?: string }
-    toast.error('Failed to unlink device', err.message)
+    toast.error('Failed to unlink module', err.message)
   } finally {
     isUnlinking.value = false
   }
@@ -247,15 +249,15 @@ const handleUnlinkDevice = async () => {
 // Reset link form
 const resetLinkForm = () => {
   linkMode.value = 'select'
-  selectedDeviceId.value = ''
-  newDevice.deviceProfileId = ''
-  newDevice.serialNumber = ''
-  newDevice.dynamicFields = {}
+  selectedModuleId.value = ''
+  newModule.moduleProfileId = ''
+  newModule.serialNumber = ''
+  newModule.dynamicFields = {}
 }
 
 // Open link dialog
 const openLinkDialog = async () => {
-  await Promise.all([fetchAvailableDevices(), fetchDeviceProfiles()])
+  await Promise.all([fetchAvailableModules(), fetchModuleProfiles()])
   showLinkDialog.value = true
 }
 
@@ -358,7 +360,7 @@ const handleEditSuccess = () => {
               <Signal class="h-5 w-5 text-green-500" />
             </div>
             <div>
-              <p class="text-2xl font-bold">{{ meter.activeDevice?.lastSignalStrength ?? '-' }}</p>
+              <p class="text-2xl font-bold">{{ meter.activeModule?.lastSignalStrength ?? '-' }}</p>
               <p class="text-sm text-muted-foreground">Signal Strength</p>
             </div>
           </div>
@@ -370,8 +372,8 @@ const handleEditSuccess = () => {
               <Battery class="h-5 w-5 text-yellow-500" />
             </div>
             <div>
-              <p class="text-2xl font-bold" :class="getBatteryColor(meter.activeDevice?.lastBatteryLevel)">
-                {{ meter.activeDevice?.lastBatteryLevel != null ? `${meter.activeDevice.lastBatteryLevel}%` : '-' }}
+              <p class="text-2xl font-bold" :class="getBatteryColor(meter.activeModule?.lastBatteryLevel)">
+                {{ meter.activeModule?.lastBatteryLevel != null ? `${meter.activeModule.lastBatteryLevel}%` : '-' }}
               </p>
               <p class="text-sm text-muted-foreground">Battery Level</p>
             </div>
@@ -429,54 +431,54 @@ const handleEditSuccess = () => {
           </UiCardContent>
         </UiCard>
         
-        <!-- Connected Device Card (NEW) -->
+        <!-- Connected Module Card (NEW) -->
         <UiCard>
           <UiCardHeader>
             <UiCardTitle class="flex items-center gap-2">
               <Radio class="h-5 w-5" />
-              Connected Device
+              Connected Module
             </UiCardTitle>
           </UiCardHeader>
           <UiCardContent>
-            <template v-if="meter.activeDevice">
-              <!-- Device is linked -->
+            <template v-if="meter.activeModule">
+              <!-- Module is linked -->
               <div class="space-y-4">
                 <div class="p-4 rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900">
                   <div class="flex items-center gap-2 text-green-700 dark:text-green-400 mb-2">
                     <Link2 class="h-4 w-4" />
-                    <span class="text-sm font-medium">Device Linked</span>
+                    <span class="text-sm font-medium">Module Linked</span>
                   </div>
                   
-                  <p class="font-mono font-medium">{{ meter.activeDevice.serialNumber }}</p>
+                  <p class="font-mono font-medium">{{ meter.activeModule.serialNumber }}</p>
                   <p class="text-xs text-muted-foreground mt-1">
-                    {{ getDeviceIdentifier(meter.activeDevice) }}
+                    {{ getModuleIdentifier(meter.activeModule) }}
                   </p>
                 </div>
                 
                 <div class="space-y-2 text-sm">
                   <div class="flex justify-between">
                     <span class="text-muted-foreground">Brand</span>
-                    <span>{{ meter.activeDevice.deviceProfile?.brand }}</span>
+                    <span>{{ meter.activeModule.moduleProfile?.brand }}</span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-muted-foreground">Model</span>
-                    <span>{{ meter.activeDevice.deviceProfile?.modelCode }}</span>
+                    <span>{{ meter.activeModule.moduleProfile?.modelCode }}</span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-muted-foreground">Technology</span>
                     <UiBadge variant="outline" class="text-xs">
-                      {{ meter.activeDevice.deviceProfile?.communicationTechnology?.replace(/_/g, '-') }}
+                      {{ meter.activeModule.moduleProfile?.communicationTechnology?.replace(/_/g, '-') }}
                     </UiBadge>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-muted-foreground">Battery</span>
-                    <span :class="getBatteryColor(meter.activeDevice.lastBatteryLevel)">
-                      {{ meter.activeDevice.lastBatteryLevel != null ? `${meter.activeDevice.lastBatteryLevel}%` : '-' }}
+                    <span :class="getBatteryColor(meter.activeModule.lastBatteryLevel)">
+                      {{ meter.activeModule.lastBatteryLevel != null ? `${meter.activeModule.lastBatteryLevel}%` : '-' }}
                     </span>
                   </div>
                   <div class="flex justify-between">
                     <span class="text-muted-foreground">Last Comm</span>
-                    <span>{{ meter.activeDevice.lastCommunicationAt ? formatDate(meter.activeDevice.lastCommunicationAt) : 'Never' }}</span>
+                    <span>{{ meter.activeModule.lastCommunicationAt ? formatDate(meter.activeModule.lastCommunicationAt) : 'Never' }}</span>
                   </div>
                 </div>
                 
@@ -484,9 +486,9 @@ const handleEditSuccess = () => {
                   <UiButton
                     variant="link"
                     class="w-full justify-start p-0 h-auto"
-                    @click="navigateTo(`/devices/${meter.activeDevice!.id}`)"
+                    @click="navigateTo(`/modules/${meter.activeModule!.id}`)"
                   >
-                    View Device Details →
+                    View Module Details →
                   </UiButton>
                   
                   <UiButton
@@ -495,26 +497,26 @@ const handleEditSuccess = () => {
                     @click="showUnlinkConfirm = true"
                   >
                     <Link2Off class="h-4 w-4" />
-                    Unlink Device
+                    Unlink Module
                   </UiButton>
                 </div>
               </div>
             </template>
             
             <template v-else>
-              <!-- No device linked -->
+              <!-- No module linked -->
               <div class="text-center py-6">
                 <div class="p-4 rounded-full bg-muted w-fit mx-auto mb-4">
                   <Link2Off class="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p class="font-medium text-muted-foreground">No Device Linked</p>
+                <p class="font-medium text-muted-foreground">No Module Linked</p>
                 <p class="text-sm text-muted-foreground mt-1">
-                  This meter doesn't have a communication device
+                  This meter doesn't have a communication module
                 </p>
                 
                 <UiButton class="mt-4" @click="openLinkDialog">
                   <Link2 class="h-4 w-4" />
-                  Link Device
+                  Link Module
                 </UiButton>
               </div>
             </template>
@@ -523,38 +525,111 @@ const handleEditSuccess = () => {
       </div>
       
       <!-- Associations -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Subscription & Customer -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Customer Card -->
         <UiCard>
           <UiCardHeader>
             <UiCardTitle class="flex items-center gap-2">
               <User class="h-4 w-4" />
+              Customer
+            </UiCardTitle>
+          </UiCardHeader>
+          <UiCardContent>
+            <template v-if="meter.subscription?.customer">
+              <div class="flex items-center gap-3 mb-4">
+                <UiAvatar 
+                  size="lg" 
+                  :fallback="(meter.subscription.customer.details?.firstName || meter.subscription.customer.details?.organizationName || 'U').charAt(0)" 
+                />
+                <div>
+                  <p class="font-medium text-lg">
+                    {{ meter.subscription.customer?.details?.firstName 
+                      ? `${meter.subscription.customer.details.firstName} ${meter.subscription.customer.details.lastName || ''}`
+                      : meter.subscription.customer?.details?.organizationName || 'Unknown' }}
+                  </p>
+                  <p class="text-sm text-muted-foreground">
+                    {{ meter.subscription.customer.customerType === 'INDIVIDUAL' ? 'Individual' : 'Organization' }}
+                  </p>
+                </div>
+              </div>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-muted-foreground">{{ meter.subscription.customer.customerType === 'INDIVIDUAL' ? 'TC ID' : 'Tax ID' }}</span>
+                  <span class="font-mono">
+                    {{ meter.subscription.customer.details?.tcIdNo || meter.subscription.customer.details?.taxId || '-' }}
+                  </span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-muted-foreground">Contact</span>
+                  <span>
+                    {{ meter.subscription.customer.details?.phone || meter.subscription.customer.details?.contactPhone || '-' }}
+                  </span>
+                </div>
+              </div>
+              <UiButton
+                variant="outline"
+                size="sm"
+                class="w-full mt-4"
+                @click="navigateTo(`/customers/${meter.subscription?.customer?.id}`)"
+              >
+                View Customer Details
+              </UiButton>
+            </template>
+            <div v-else class="text-center py-6 text-muted-foreground">
+              <User class="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No customer assigned</p>
+              <p class="text-sm">Link this meter to a subscription first</p>
+            </div>
+          </UiCardContent>
+        </UiCard>
+        
+        <!-- Subscription Card -->
+        <UiCard>
+          <UiCardHeader>
+            <UiCardTitle class="flex items-center gap-2">
+              <FileText class="h-4 w-4" />
               Subscription
             </UiCardTitle>
           </UiCardHeader>
           <UiCardContent>
             <template v-if="meter.subscription">
-              <p class="font-medium">
-                {{ meter.subscription.customer?.details?.firstName 
-                  ? `${meter.subscription.customer.details.firstName} ${meter.subscription.customer.details.lastName || ''}`
-                  : meter.subscription.customer?.details?.organizationName || 'Unknown' }}
-              </p>
-              <p class="text-sm text-muted-foreground">
-                {{ meter.subscription.subscriptionType }} - {{ meter.subscription.subscriptionGroup?.replace(/_/g, ' ') }}
-              </p>
+              <div class="space-y-3">
+                <div>
+                  <p class="text-sm text-muted-foreground">Subscription Number</p>
+                  <p class="font-mono font-medium">{{ meter.subscription.subscriptionNumber || meter.subscriptionId?.slice(0, 8) }}</p>
+                </div>
+                <div>
+                  <p class="text-sm text-muted-foreground">Consumption Group</p>
+                  <UiBadge :variant="meter.subscription.consumptionGroup === 'HIGH_CONSUMPTION' ? 'destructive' : 'secondary'">
+                    {{ meter.subscription.consumptionGroup?.replace(/_/g, ' ') || 'Normal' }}
+                  </UiBadge>
+                </div>
+                <div>
+                  <p class="text-sm text-muted-foreground">Status</p>
+                  <UiBadge :variant="meter.subscription.isActive ? 'success' : 'secondary'">
+                    {{ meter.subscription.isActive ? 'Active' : 'Inactive' }}
+                  </UiBadge>
+                </div>
+              </div>
               <UiButton
-                variant="link"
+                variant="outline"
                 size="sm"
-                class="p-0 h-auto mt-1"
+                class="w-full mt-4"
                 @click="navigateTo(`/subscriptions/${meter.subscriptionId}`)"
               >
-                View Subscription →
+                View Subscription Details
               </UiButton>
             </template>
-            <p v-else class="text-muted-foreground">Not assigned to subscription</p>
+            <div v-else class="text-center py-6 text-muted-foreground">
+              <FileText class="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>Not assigned to subscription</p>
+            </div>
           </UiCardContent>
         </UiCard>
-        
+      </div>
+      
+      <!-- Tenant & Location -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Tenant -->
         <UiCard>
           <UiCardHeader>
@@ -564,19 +639,20 @@ const handleEditSuccess = () => {
             </UiCardTitle>
           </UiCardHeader>
           <UiCardContent>
-            <p class="font-medium">{{ meter.tenant?.name || meter.tenantId }}</p>
+            <p class="font-medium text-lg">{{ meter.tenant?.name || meter.tenantId }}</p>
+            <p v-if="meter.tenant?.path" class="text-sm text-muted-foreground font-mono mt-1">{{ meter.tenant.path }}</p>
             <UiButton
-              variant="link"
+              variant="outline"
               size="sm"
-              class="p-0 h-auto mt-1"
+              class="mt-4"
               @click="navigateTo(`/iam/tenants/${meter.tenantId}`)"
             >
-              View Tenant →
+              View Tenant Details
             </UiButton>
           </UiCardContent>
         </UiCard>
         
-        <!-- Location (from Subscription) -->
+        <!-- Location (from Subscription) with Map -->
         <UiCard>
           <UiCardHeader>
             <UiCardTitle class="flex items-center gap-2">
@@ -585,16 +661,85 @@ const handleEditSuccess = () => {
             </UiCardTitle>
           </UiCardHeader>
           <UiCardContent>
-            <p class="text-sm">{{ formatAddress(meter.subscription?.address) }}</p>
-            <p v-if="meter.subscription?.latitude && meter.subscription?.longitude" class="text-xs text-muted-foreground mt-1 font-mono">
-              {{ Number(meter.subscription.latitude).toFixed(6) }}, {{ Number(meter.subscription.longitude).toFixed(6) }}
-            </p>
+            <template v-if="meter.subscription?.address">
+              <p class="text-sm mb-4">{{ formatAddress(meter.subscription.address) }}</p>
+              
+              <!-- Map Preview with Hover -->
+              <div 
+                v-if="meter.subscription?.latitude && meter.subscription?.longitude" 
+                class="relative rounded-lg overflow-hidden border border-border"
+              >
+                <UiHoverCard>
+                  <UiHoverCardTrigger as-child>
+                    <div class="h-32 bg-muted/50 flex items-center justify-center cursor-pointer hover:bg-muted transition-colors">
+                      <div class="text-center">
+                        <MapPin class="h-6 w-6 mx-auto text-primary mb-1" />
+                        <p class="text-xs text-muted-foreground font-mono">
+                          {{ Number(meter.subscription.latitude).toFixed(6) }}, {{ Number(meter.subscription.longitude).toFixed(6) }}
+                        </p>
+                        <p class="text-[10px] text-muted-foreground mt-1">Hover for preview</p>
+                      </div>
+                    </div>
+                  </UiHoverCardTrigger>
+                  <UiHoverCardContent class="w-80 p-0" side="top">
+                    <div class="p-4 space-y-3">
+                      <div class="flex items-center gap-2">
+                        <MapPin class="h-4 w-4 text-primary" />
+                        <h4 class="font-semibold">Location Preview</h4>
+                      </div>
+                      <div class="h-40 rounded-lg overflow-hidden bg-muted">
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          frameborder="0"
+                          style="border:0"
+                          :src="`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6ceM4M1fh0sFxm4&q=${Number(meter.subscription!.latitude).toFixed(6)},${Number(meter.subscription!.longitude).toFixed(6)}&zoom=15`"
+                          allowfullscreen
+                          loading="lazy"
+                        />
+                      </div>
+                      <p class="text-xs text-muted-foreground">
+                        {{ formatAddress(meter.subscription?.address) }}
+                      </p>
+                    </div>
+                  </UiHoverCardContent>
+                </UiHoverCard>
+                
+                <!-- Google Maps Link -->
+                <a
+                  :href="`https://www.google.com/maps?q=${Number(meter.subscription.latitude).toFixed(6)},${Number(meter.subscription.longitude).toFixed(6)}`"
+                  target="_blank"
+                  class="absolute top-2 right-2 p-1.5 bg-background/80 rounded-md hover:bg-background transition-colors flex items-center gap-1 text-[10px]"
+                >
+                  <Navigation class="h-3 w-3" />
+                  Maps
+                  <ExternalLink class="h-2 w-2" />
+                </a>
+              </div>
+              
+              <div v-else class="h-32 bg-muted/50 rounded-lg flex items-center justify-center">
+                <div class="text-center text-muted-foreground">
+                  <MapPin class="h-6 w-6 mx-auto mb-1 opacity-50" />
+                  <p class="text-xs">No coordinates</p>
+                </div>
+              </div>
+            </template>
+            <div v-else class="text-center py-6 text-muted-foreground">
+              <MapPin class="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No location available</p>
+              <p class="text-sm">Address is set on subscription</p>
+            </div>
           </UiCardContent>
         </UiCard>
       </div>
       
       <!-- Consumption Chart -->
-      <MetersConsumptionChart :meter-id="meterId" />
+      <ConsumptionAnalysis
+        source-type="meter"
+        :source-id="meterId"
+        title="Consumption Analysis"
+        description="Water consumption over time"
+      />
       
       <!-- Reading History -->
       <UiCard>
@@ -678,11 +823,11 @@ const handleEditSuccess = () => {
       </UiDialogContent>
     </UiDialog>
     
-    <!-- Link Device Dialog -->
+    <!-- Link Module Dialog -->
     <UiDialog v-model:open="showLinkDialog">
       <UiDialogContent class="max-w-2xl">
         <UiDialogHeader>
-          <UiDialogTitle>Link Device</UiDialogTitle>
+          <UiDialogTitle>Link Module</UiDialogTitle>
         </UiDialogHeader>
       <div class="space-y-6">
         <!-- Mode Selection -->
@@ -694,9 +839,9 @@ const handleEditSuccess = () => {
           >
             <div class="flex items-center gap-2 mb-2">
               <Warehouse class="h-5 w-5" :class="linkMode === 'select' ? 'text-primary' : 'text-muted-foreground'" />
-              <span class="font-medium">Select from Inventory</span>
+              <span class="font-medium">Select from Warehouse</span>
             </div>
-            <p class="text-sm text-muted-foreground">Choose an available device from warehouse</p>
+            <p class="text-sm text-muted-foreground">Choose an available module from warehouse</p>
           </div>
           
           <div
@@ -706,35 +851,35 @@ const handleEditSuccess = () => {
           >
             <div class="flex items-center gap-2 mb-2">
               <Plus class="h-5 w-5" :class="linkMode === 'create' ? 'text-primary' : 'text-muted-foreground'" />
-              <span class="font-medium">Create New Device</span>
+              <span class="font-medium">Create New Module</span>
             </div>
-            <p class="text-sm text-muted-foreground">Register a new device inline</p>
+            <p class="text-sm text-muted-foreground">Register a new module inline</p>
           </div>
         </div>
         
-        <!-- Select from Inventory -->
+        <!-- Select from Warehouse -->
         <div v-if="linkMode === 'select'" class="space-y-4">
-          <div v-if="availableDevices.length === 0" class="text-center py-8 text-muted-foreground">
+          <div v-if="availableModules.length === 0" class="text-center py-8 text-muted-foreground">
             <Warehouse class="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>No available devices in warehouse</p>
+            <p>No available modules in warehouse</p>
           </div>
           
           <div v-else class="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
             <div
-              v-for="device in availableDevices"
-              :key="device.id"
+              v-for="mod in availableModules"
+              :key="mod.id"
               class="p-3 rounded-lg border cursor-pointer transition-colors"
-              :class="selectedDeviceId === device.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'"
-              @click="selectedDeviceId = device.id"
+              :class="selectedModuleId === mod.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'"
+              @click="selectedModuleId = mod.id"
             >
               <div class="flex items-center justify-between">
                 <div>
-                  <p class="font-medium font-mono">{{ device.serialNumber }}</p>
-                  <p class="text-xs text-muted-foreground">{{ getDeviceIdentifier(device) }}</p>
+                  <p class="font-medium font-mono">{{ mod.serialNumber }}</p>
+                  <p class="text-xs text-muted-foreground">{{ getModuleIdentifier(mod) }}</p>
                 </div>
                 <div class="text-right">
                   <UiBadge variant="outline" class="text-xs">
-                    {{ device.deviceProfile?.brand }} {{ device.deviceProfile?.modelCode }}
+                    {{ mod.moduleProfile?.brand }} {{ mod.moduleProfile?.modelCode }}
                   </UiBadge>
                 </div>
               </div>
@@ -742,24 +887,24 @@ const handleEditSuccess = () => {
           </div>
         </div>
         
-        <!-- Create New Device -->
+        <!-- Create New Module -->
         <div v-if="linkMode === 'create'" class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <UiLabel>Device Profile *</UiLabel>
+              <UiLabel>Module Profile *</UiLabel>
               <UiSelect
-                v-model="newDevice.deviceProfileId"
-                :options="deviceProfiles.map(p => ({ 
+                v-model="newModule.moduleProfileId"
+                :options="moduleProfiles.map(p => ({ 
                   label: `${p.brand} ${p.modelCode} (${p.communicationTechnology?.replace(/_/g, '-')})`, 
                   value: p.id 
                 }))"
-                placeholder="Select device profile"
+                placeholder="Select module profile"
               />
             </div>
             
             <div>
               <UiLabel>Serial Number *</UiLabel>
-              <UiInput v-model="newDevice.serialNumber" placeholder="e.g. DEV-001234" />
+              <UiInput v-model="newModule.serialNumber" placeholder="e.g. DEV-001234" />
             </div>
           </div>
           
@@ -773,11 +918,11 @@ const handleEditSuccess = () => {
           </UiButton>
           <UiButton
             :loading="isLinking"
-            :disabled="(linkMode === 'select' && !selectedDeviceId) || (linkMode === 'create' && (!newDevice.deviceProfileId || !newDevice.serialNumber))"
-            @click="handleLinkDevice"
+            :disabled="(linkMode === 'select' && !selectedModuleId) || (linkMode === 'create' && (!newModule.moduleProfileId || !newModule.serialNumber))"
+            @click="handleLinkModule"
           >
             <Link2 class="h-4 w-4" />
-            Link Device
+            Link Module
           </UiButton>
         </div>
       </div>
@@ -788,21 +933,21 @@ const handleEditSuccess = () => {
     <UiDialog v-model:open="showUnlinkConfirm">
       <UiDialogContent>
         <UiDialogHeader>
-          <UiDialogTitle>Unlink Device</UiDialogTitle>
+          <UiDialogTitle>Unlink Module</UiDialogTitle>
         </UiDialogHeader>
         <div class="space-y-4">
           <p class="text-muted-foreground">
-            Are you sure you want to unlink the device "{{ meter?.activeDevice?.serialNumber }}" from this meter?
+            Are you sure you want to unlink the module "{{ meter?.activeModule?.serialNumber }}" from this meter?
           </p>
           <p class="text-sm text-muted-foreground">
-            The device will be moved back to Warehouse status and can be linked to another meter.
+            The module will be moved back to Warehouse status and can be linked to another meter.
           </p>
           <div class="flex justify-end gap-3">
             <UiButton variant="outline" @click="showUnlinkConfirm = false">
               Cancel
             </UiButton>
-            <UiButton variant="destructive" :loading="isUnlinking" @click="handleUnlinkDevice">
-              Unlink Device
+            <UiButton variant="destructive" :loading="isUnlinking" @click="handleUnlinkModule">
+              Unlink Module
             </UiButton>
           </div>
         </div>

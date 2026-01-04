@@ -75,10 +75,10 @@ const allNavItems: NavItem[] = [
     module: MODULES.METERS,
   },
   {
-    labelKey: 'nav.devices',
+    labelKey: 'nav.modules',
     icon: Radio,
-    to: '/devices',
-    module: MODULES.DEVICES,
+    to: '/modules',
+    module: MODULES.MODULES,
   },
   {
     labelKey: 'nav.profiles',

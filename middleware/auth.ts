@@ -9,7 +9,7 @@ const routePermissions: Record<string, string> = {
   '/customers': 'customer',
   '/subscriptions': 'subscription',
   '/meters': 'meter',
-  '/devices': 'device',
+  '/modules': 'module',
   '/profiles': 'profile',
   '/decoders': 'decoder',
   '/alarms': 'alarm',

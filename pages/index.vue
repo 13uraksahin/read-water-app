@@ -32,6 +32,7 @@ const statsCards = computed(() => [
     icon: Gauge,
     color: 'text-primary',
     bgColor: 'bg-primary/10',
+    route: '/meters',
   },
   {
     labelKey: 'dashboard.totalCustomers',
@@ -39,6 +40,7 @@ const statsCards = computed(() => [
     icon: Users,
     color: 'text-blue-500',
     bgColor: 'bg-blue-500/10',
+    route: '/customers',
   },
   {
     labelKey: 'dashboard.totalUsage',
@@ -46,6 +48,7 @@ const statsCards = computed(() => [
     icon: Droplets,
     color: 'text-cyan-500',
     bgColor: 'bg-cyan-500/10',
+    route: '/readings',
   },
   {
     labelKey: 'dashboard.activeAlarms',
@@ -53,6 +56,7 @@ const statsCards = computed(() => [
     icon: AlertTriangle,
     color: 'text-red-500',
     bgColor: 'bg-red-500/10',
+    route: '/alarms',
   },
   {
     labelKey: 'dashboard.inMaintenance',
@@ -60,6 +64,7 @@ const statsCards = computed(() => [
     icon: Wrench,
     color: 'text-orange-500',
     bgColor: 'bg-orange-500/10',
+    route: '/meters',
   },
   {
     labelKey: 'dashboard.offline',
@@ -67,24 +72,27 @@ const statsCards = computed(() => [
     icon: WifiOff,
     color: 'text-gray-500',
     bgColor: 'bg-gray-500/10',
+    route: '/meters',
   },
 ])
 
-// Device stats cards (for Asset/Device separation visibility)
-const deviceStatsCards = computed(() => [
+// Module stats cards (for Asset/Module separation visibility)
+const moduleStatsCards = computed(() => [
   {
-    labelKey: 'dashboard.totalDevices',
-    value: dashboardStore.totalDevices,
+    labelKey: 'dashboard.totalModules',
+    value: dashboardStore.totalModules,
     icon: Cpu,
     color: 'text-purple-500',
     bgColor: 'bg-purple-500/10',
+    route: '/modules',
   },
   {
-    labelKey: 'dashboard.devicesInWarehouse',
-    value: dashboardStore.devicesInWarehouse,
+    labelKey: 'dashboard.modulesInWarehouse',
+    value: dashboardStore.modulesInWarehouse,
     icon: Warehouse,
     color: 'text-amber-500',
     bgColor: 'bg-amber-500/10',
+    route: '/modules',
   },
 ])
 </script>
@@ -105,36 +113,40 @@ const deviceStatsCards = computed(() => [
     
     <!-- Main Stats grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-      <UiCard v-for="stat in statsCards" :key="stat.labelKey" hover>
-        <UiCardContent class="p-4">
-          <div class="flex items-center gap-4">
-            <div :class="['p-3 rounded-lg', stat.bgColor]">
-              <component :is="stat.icon" :class="['h-5 w-5', stat.color]" />
+      <NuxtLink v-for="stat in statsCards" :key="stat.labelKey" :to="stat.route" class="block">
+        <UiCard hover class="h-full cursor-pointer transition-shadow hover:shadow-md">
+          <UiCardContent class="p-4">
+            <div class="flex items-center gap-4">
+              <div :class="['p-3 rounded-lg', stat.bgColor]">
+                <component :is="stat.icon" :class="['h-5 w-5', stat.color]" />
+              </div>
+              <div>
+                <p class="text-2xl font-bold">{{ stat.value }}</p>
+                <p class="text-sm text-muted-foreground">{{ $t(stat.labelKey) }}</p>
+              </div>
             </div>
-            <div>
-              <p class="text-2xl font-bold">{{ stat.value }}</p>
-              <p class="text-sm text-muted-foreground">{{ $t(stat.labelKey) }}</p>
-            </div>
-          </div>
-        </UiCardContent>
-      </UiCard>
+          </UiCardContent>
+        </UiCard>
+      </NuxtLink>
     </div>
     
-    <!-- Device Stats (Asset/Device Separation) -->
-    <div v-if="dashboardStore.totalDevices > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <UiCard v-for="stat in deviceStatsCards" :key="stat.labelKey" hover>
-        <UiCardContent class="p-4">
-          <div class="flex items-center gap-4">
-            <div :class="['p-3 rounded-lg', stat.bgColor]">
-              <component :is="stat.icon" :class="['h-5 w-5', stat.color]" />
+    <!-- Module Stats (Asset/Module Separation) -->
+    <div v-if="dashboardStore.totalModules > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <NuxtLink v-for="stat in moduleStatsCards" :key="stat.labelKey" :to="stat.route" class="block">
+        <UiCard hover class="h-full cursor-pointer transition-shadow hover:shadow-md">
+          <UiCardContent class="p-4">
+            <div class="flex items-center gap-4">
+              <div :class="['p-3 rounded-lg', stat.bgColor]">
+                <component :is="stat.icon" :class="['h-5 w-5', stat.color]" />
+              </div>
+              <div>
+                <p class="text-2xl font-bold">{{ stat.value }}</p>
+                <p class="text-sm text-muted-foreground">{{ $t(stat.labelKey) }}</p>
+              </div>
             </div>
-            <div>
-              <p class="text-2xl font-bold">{{ stat.value }}</p>
-              <p class="text-sm text-muted-foreground">{{ $t(stat.labelKey) }}</p>
-            </div>
-          </div>
-        </UiCardContent>
-      </UiCard>
+          </UiCardContent>
+        </UiCard>
+      </NuxtLink>
     </div>
     
     <!-- Map and alerts grid -->

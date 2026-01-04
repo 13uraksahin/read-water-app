@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Plus, Trash2 } from 'lucide-vue-next'
-import type { Tenant, MeterProfile, DeviceProfile } from '~/types'
+import type { Tenant, MeterProfile, ModuleProfile } from '~/types'
 import { SearchableSelect } from '~/components/ui/searchable-select'
 
 const props = defineProps<{
@@ -21,7 +21,7 @@ const isLoading = ref(false)
 const isSubmitting = ref(false)
 const tenants = ref<Tenant[]>([])
 const profiles = ref<MeterProfile[]>([])
-const deviceProfiles = ref<DeviceProfile[]>([])
+const moduleProfiles = ref<ModuleProfile[]>([])
 
 // Subscription options
 const subscriptionStatusOptions = [
@@ -63,7 +63,7 @@ const formData = reactive({
     extraDetails: props.tenant?.address?.extraDetails || '',
   },
   allowedProfileIds: [] as string[],
-  allowedDeviceProfileIds: [] as string[],
+  allowedModuleProfileIds: [] as string[],
 })
 
 // Validation errors
@@ -76,23 +76,23 @@ const isEditMode = computed(() => props.mode === 'edit')
 const fetchLookups = async () => {
   isLoading.value = true
   try {
-    const [tenantsRes, profilesRes, deviceProfilesRes] = await Promise.all([
+    const [tenantsRes, profilesRes, moduleProfilesRes] = await Promise.all([
       api.getList<Tenant>('/api/v1/tenants', { limit: 100 }),
       api.getList<MeterProfile>('/api/v1/profiles', { limit: 100 }),
-      api.getList<DeviceProfile>('/api/v1/device-profiles', { limit: 100 }),
+      api.getList<ModuleProfile>('/api/v1/module-profiles', { limit: 100 }),
     ])
     
     tenants.value = tenantsRes.data
     profiles.value = profilesRes.data
-    deviceProfiles.value = deviceProfilesRes.data
+    moduleProfiles.value = moduleProfilesRes.data
     
     // Set allowed profiles if editing
     if (props.tenant) {
       if (props.tenant.allowedProfiles) {
         formData.allowedProfileIds = props.tenant.allowedProfiles.map(p => p.id)
       }
-      if (props.tenant.allowedDeviceProfiles) {
-        formData.allowedDeviceProfileIds = props.tenant.allowedDeviceProfiles.map(p => p.id)
+      if (props.tenant.allowedModuleProfiles) {
+        formData.allowedModuleProfileIds = props.tenant.allowedModuleProfiles.map(p => p.id)
       }
     }
   } catch (error) {
@@ -144,7 +144,7 @@ const handleSubmit = async () => {
       longitude: formData.longitude,
       address: formData.address,
       allowedProfileIds: formData.allowedProfileIds.length > 0 ? formData.allowedProfileIds : undefined,
-      allowedDeviceProfileIds: formData.allowedDeviceProfileIds.length > 0 ? formData.allowedDeviceProfileIds : undefined,
+      allowedModuleProfileIds: formData.allowedModuleProfileIds.length > 0 ? formData.allowedModuleProfileIds : undefined,
     }
     
     if (isEditMode.value && props.tenant) {
@@ -174,13 +174,13 @@ const toggleProfile = (profileId: string) => {
   }
 }
 
-// Toggle device profile selection
-const toggleDeviceProfile = (profileId: string) => {
-  const index = formData.allowedDeviceProfileIds.indexOf(profileId)
+// Toggle module profile selection
+const toggleModuleProfile = (profileId: string) => {
+  const index = formData.allowedModuleProfileIds.indexOf(profileId)
   if (index > -1) {
-    formData.allowedDeviceProfileIds.splice(index, 1)
+    formData.allowedModuleProfileIds.splice(index, 1)
   } else {
-    formData.allowedDeviceProfileIds.push(profileId)
+    formData.allowedModuleProfileIds.push(profileId)
   }
 }
 
@@ -433,30 +433,30 @@ onMounted(() => {
         </p>
       </div>
       
-      <!-- Allowed Device Profiles -->
+      <!-- Allowed Module Profiles -->
       <div class="space-y-4 pt-4 border-t border-border">
-        <h3 class="font-medium text-lg">Allowed Device Profiles</h3>
-        <p class="text-sm text-muted-foreground">Select which device profiles this tenant can use</p>
+        <h3 class="font-medium text-lg">Allowed Module Profiles</h3>
+        <p class="text-sm text-muted-foreground">Select which module profiles this tenant can use</p>
         
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
           <button
-            v-for="profile in deviceProfiles"
+            v-for="profile in moduleProfiles"
             :key="profile.id"
             type="button"
             class="flex items-center gap-2 p-3 rounded-lg border text-left transition-colors"
-            :class="formData.allowedDeviceProfileIds.includes(profile.id)
+            :class="formData.allowedModuleProfileIds.includes(profile.id)
               ? 'border-primary bg-primary/5'
               : 'border-border hover:border-muted-foreground/50'"
-            @click="toggleDeviceProfile(profile.id)"
+            @click="toggleModuleProfile(profile.id)"
           >
             <div
               class="h-4 w-4 rounded border flex items-center justify-center"
-              :class="formData.allowedDeviceProfileIds.includes(profile.id)
+              :class="formData.allowedModuleProfileIds.includes(profile.id)
                 ? 'bg-primary border-primary'
                 : 'border-muted-foreground/50'"
             >
               <svg
-                v-if="formData.allowedDeviceProfileIds.includes(profile.id)"
+                v-if="formData.allowedModuleProfileIds.includes(profile.id)"
                 class="h-3 w-3 text-primary-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -472,8 +472,8 @@ onMounted(() => {
           </button>
         </div>
         
-        <p v-if="deviceProfiles.length === 0" class="text-sm text-muted-foreground text-center py-4">
-          No device profiles available
+        <p v-if="moduleProfiles.length === 0" class="text-sm text-muted-foreground text-center py-4">
+          No module profiles available
         </p>
       </div>
       

@@ -35,7 +35,7 @@ const moduleOptions = [
   { label: 'Subscriptions', value: Module.SUBSCRIPTIONS },
   { label: 'Customers', value: Module.CUSTOMERS },
   { label: 'Meters', value: Module.METERS },
-  { label: 'Devices', value: Module.DEVICES },
+  { label: 'Modules', value: Module.MODULES },
   { label: 'Profiles', value: Module.PROFILES },
   { label: 'Alarms', value: Module.ALARMS },
   { label: 'Tenants', value: Module.TENANTS },

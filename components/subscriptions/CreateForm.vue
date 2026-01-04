@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SubscriptionType, SubscriptionGroup, type Subscription, type Customer } from '~/types'
+import { SubscriptionGroup, type Subscription, type Customer } from '~/types'
 import { SearchableSelect } from '~/components/ui/searchable-select'
 
 const props = defineProps<{
@@ -31,7 +31,6 @@ const form = ref({
   tenantId: getDefaultTenantId(),
   subscriptionNumber: props.subscription?.subscriptionNumber || '',
   customerId: props.subscription?.customerId || '',
-  subscriptionType: props.subscription?.subscriptionType || SubscriptionType.INDIVIDUAL,
   subscriptionGroup: props.subscription?.subscriptionGroup || SubscriptionGroup.NORMAL_CONSUMPTION,
   address: {
     city: props.subscription?.address?.city || '',
@@ -56,11 +55,6 @@ const customers = ref<Customer[]>([])
 const isLoadingCustomers = ref(false)
 
 // Options for selects
-const subscriptionTypeOptions = [
-  { label: 'Individual', value: SubscriptionType.INDIVIDUAL },
-  { label: 'Organizational', value: SubscriptionType.ORGANIZATIONAL },
-]
-
 const subscriptionGroupOptions = [
   { label: 'Normal Consumption', value: SubscriptionGroup.NORMAL_CONSUMPTION },
   { label: 'High Consumption', value: SubscriptionGroup.HIGH_CONSUMPTION },
@@ -143,7 +137,6 @@ const handleSubmit = async () => {
     if (isEditing.value) {
       await api.patch(`/api/v1/subscriptions/${props.subscription!.id}`, {
         subscriptionNumber: form.value.subscriptionNumber,
-        subscriptionType: form.value.subscriptionType,
         subscriptionGroup: form.value.subscriptionGroup,
         address: form.value.address,
         addressCode: form.value.addressCode,
@@ -220,29 +213,16 @@ const handleSubmit = async () => {
       </div>
     </div>
     
-    <!-- Subscription Type -->
-    <div class="grid grid-cols-2 gap-4">
-      <div class="space-y-2">
-        <UiLabel>Subscription Type *</UiLabel>
-        <SearchableSelect 
-          v-model="form.subscriptionType"
-          :options="subscriptionTypeOptions"
-          placeholder="Select type"
-          search-placeholder="Search..."
-          empty-text="No types available"
-        />
-      </div>
-      
-      <div class="space-y-2">
-        <UiLabel>Consumption Group</UiLabel>
-        <SearchableSelect 
-          v-model="form.subscriptionGroup"
-          :options="subscriptionGroupOptions"
-          placeholder="Select group"
-          search-placeholder="Search..."
-          empty-text="No groups available"
-        />
-      </div>
+    <!-- Consumption Group -->
+    <div class="space-y-2">
+      <UiLabel>Consumption Group</UiLabel>
+      <SearchableSelect 
+        v-model="form.subscriptionGroup"
+        :options="subscriptionGroupOptions"
+        placeholder="Select group"
+        search-placeholder="Search..."
+        empty-text="No groups available"
+      />
     </div>
     
     <!-- Address -->

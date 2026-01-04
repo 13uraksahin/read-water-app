@@ -12,7 +12,7 @@ import {
   Check,
   X,
 } from 'lucide-vue-next'
-import type { DeviceProfile } from '~/types'
+import type { ModuleProfile } from '~/types'
 import { formatDate, formatDateTime } from '~/lib/utils'
 
 definePageMeta({
@@ -27,7 +27,7 @@ const toast = useToast()
 const profileId = computed(() => route.params.id as string)
 
 // State
-const profile = ref<DeviceProfile | null>(null)
+const profile = ref<ModuleProfile | null>(null)
 const isLoading = ref(true)
 const showEditDialog = ref(false)
 const isTesting = ref(false)
@@ -39,11 +39,11 @@ const testError = ref<string | null>(null)
 const fetchProfile = async () => {
   isLoading.value = true
   try {
-    const response = await api.get<DeviceProfile>(`/api/v1/device-profiles/${profileId.value}`)
+    const response = await api.get<ModuleProfile>(`/api/v1/module-profiles/${profileId.value}`)
     profile.value = response
     testPayload.value = response.testPayload || ''
   } catch (error) {
-    toast.error('Failed to load device profile')
+    toast.error('Failed to load module profile')
     router.push('/profiles')
   } finally {
     isLoading.value = false
@@ -92,7 +92,7 @@ onMounted(() => {
 const handleEditSuccess = () => {
   showEditDialog.value = false
   fetchProfile()
-  toast.success('Device profile updated successfully')
+  toast.success('Module profile updated successfully')
 }
 </script>
 
@@ -115,7 +115,7 @@ const handleEditSuccess = () => {
             {{ profile.brand }} {{ profile.modelCode }}
           </h1>
           <p class="text-sm text-muted-foreground">
-            {{ profile.communicationTechnology?.replace(/_/g, '-') }} Device Profile
+            {{ profile.communicationTechnology?.replace(/_/g, '-') }} Module Profile
           </p>
         </template>
       </div>
@@ -146,11 +146,11 @@ const handleEditSuccess = () => {
     <template v-else-if="profile">
       <!-- Main content grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Device Info -->
+        <!-- Module Info -->
         <UiCard class="lg:col-span-2">
           <UiCardHeader>
-            <UiCardTitle>Device Profile Information</UiCardTitle>
-            <UiCardDescription>Communication device specifications</UiCardDescription>
+            <UiCardTitle>Module Profile Information</UiCardTitle>
+            <UiCardDescription>Communication module specifications</UiCardDescription>
           </UiCardHeader>
           <UiCardContent>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
@@ -199,7 +199,7 @@ const handleEditSuccess = () => {
               <Settings class="h-4 w-4" />
               Field Definitions
             </UiCardTitle>
-            <UiCardDescription>Required keys when adding devices</UiCardDescription>
+            <UiCardDescription>Required keys when adding modules</UiCardDescription>
           </UiCardHeader>
           <UiCardContent>
             <div v-if="profile.fieldDefinitions?.length" class="space-y-3">
@@ -236,7 +236,7 @@ const handleEditSuccess = () => {
                 <Code class="h-4 w-4" />
                 Decoder Function
               </UiCardTitle>
-              <UiCardDescription>JavaScript function to decode device payloads</UiCardDescription>
+              <UiCardDescription>JavaScript function to decode module payloads</UiCardDescription>
             </div>
             <UiButton v-if="profile.decoderFunction" variant="outline" size="sm" @click="copyDecoder">
               <Copy class="h-4 w-4" />
@@ -320,7 +320,7 @@ const handleEditSuccess = () => {
       <UiCard v-if="profile.compatibleMeterProfiles?.length">
         <UiCardHeader>
           <UiCardTitle>Compatible Meter Profiles</UiCardTitle>
-          <UiCardDescription>Meter profiles that can use devices with this profile</UiCardDescription>
+          <UiCardDescription>Meter profiles that can use modules with this profile</UiCardDescription>
         </UiCardHeader>
         <UiCardContent>
           <div class="flex flex-wrap gap-2">
@@ -342,10 +342,10 @@ const handleEditSuccess = () => {
     <UiDialog v-model:open="showEditDialog">
       <UiDialogContent class="max-w-3xl">
         <UiDialogHeader>
-          <UiDialogTitle>Edit Device Profile</UiDialogTitle>
+          <UiDialogTitle>Edit Module Profile</UiDialogTitle>
         </UiDialogHeader>
         <div class="overflow-y-auto flex-1 -mx-6 px-6">
-          <ProfilesDeviceCreateForm
+          <ProfilesModuleCreateForm
             v-if="profile"
             :profile="profile"
             mode="edit"

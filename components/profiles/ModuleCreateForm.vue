@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Plus, Trash2, Code, Play, Check, X, Wifi, Clock, Zap, Star } from 'lucide-vue-next'
 import {
-  DeviceBrand,
+  ModuleBrand,
   CommunicationTechnology,
   IntegrationType,
   COMMUNICATION_TECH_FIELDS,
-  type DeviceProfile,
-  type DeviceFieldDefinition,
+  type ModuleProfile,
+  type ModuleFieldDefinition,
   type TechFieldDefinition,
   type Scenario,
 } from '~/types'
@@ -27,7 +27,7 @@ interface ScenarioFormData {
 // Communication config type for each technology
 interface CommunicationConfig {
   technology: CommunicationTechnology
-  fieldDefinitions: DeviceFieldDefinition[]
+  fieldDefinitions: ModuleFieldDefinition[]
   scenarios: ScenarioFormData[]
   // Legacy fields (deprecated, kept for backward compatibility)
   decoderFunction: string
@@ -35,7 +35,7 @@ interface CommunicationConfig {
 }
 
 const props = defineProps<{
-  profile?: DeviceProfile
+  profile?: ModuleProfile
   mode?: 'create' | 'edit'
 }>()
 
@@ -122,7 +122,7 @@ const formData = reactive({
 const errors = reactive<Record<string, string>>({})
 
 // Options
-const brandOptions = Object.values(DeviceBrand).map(b => ({ label: b, value: b }))
+const brandOptions = Object.values(ModuleBrand).map(b => ({ label: b, value: b }))
 const technologyOptions = Object.values(CommunicationTechnology).map(t => ({ 
   label: t.replace(/_/g, '-'), 
   value: t 
@@ -417,15 +417,15 @@ const handleSubmit = async () => {
     }
     
     if (isEditMode.value && props.profile) {
-      await api.patch(`/api/v1/device-profiles/${props.profile.id}`, payload)
+      await api.patch(`/api/v1/module-profiles/${props.profile.id}`, payload)
     } else {
-      await api.post('/api/v1/device-profiles', payload)
+      await api.post('/api/v1/module-profiles', payload)
     }
     
     emit('success')
   } catch (error: unknown) {
     const err = error as { message?: string }
-    toast.error(`Failed to ${isEditMode.value ? 'update' : 'create'} device profile`, err.message)
+    toast.error(`Failed to ${isEditMode.value ? 'update' : 'create'} module profile`, err.message)
   } finally {
     isSubmitting.value = false
   }
@@ -569,7 +569,7 @@ const handleSubmit = async () => {
                 <div>
                   <h4 class="font-medium">Field Definitions</h4>
                   <p class="text-xs text-muted-foreground">
-                    Required keys for devices using {{ config.technology.replace(/_/g, '-') }}
+                    Required keys for modules using {{ config.technology.replace(/_/g, '-') }}
                   </p>
                 </div>
                 <UiButton type="button" variant="outline" size="sm" @click="addFieldDefinition(configIndex)">
@@ -608,7 +608,7 @@ const handleSubmit = async () => {
                     
                     <div>
                       <UiLabel class="text-xs">Label</UiLabel>
-                      <UiInput v-model="field.label" placeholder="e.g. Device EUI" class="h-8 text-sm" />
+                      <UiInput v-model="field.label" placeholder="e.g. Module EUI" class="h-8 text-sm" />
                     </div>
                     
                     <div>

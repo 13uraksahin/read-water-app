@@ -33,8 +33,8 @@ onMounted(() => {
 
 // Navigate to profile to edit decoder
 const goToProfile = (decoder: DecoderFunction) => {
-  if (decoder.deviceProfileId) {
-    navigateTo(`/profiles/device/${decoder.deviceProfileId}`)
+  if (decoder.moduleProfileId) {
+    navigateTo(`/profiles/module/${decoder.moduleProfileId}`)
   }
 }
 </script>
@@ -110,9 +110,9 @@ const goToProfile = (decoder: DecoderFunction) => {
           </div>
           
           <!-- Profile link -->
-          <div v-if="decoder.deviceProfile" class="mt-4 pt-4 border-t border-border">
+          <div v-if="decoder.moduleProfile" class="mt-4 pt-4 border-t border-border">
             <p class="text-xs text-muted-foreground">
-              Profile: <span class="text-foreground">{{ decoder.deviceProfile.brand }} {{ decoder.deviceProfile.modelCode }}</span>
+              Profile: <span class="text-foreground">{{ decoder.moduleProfile.brand }} {{ decoder.moduleProfile.modelCode }}</span>
             </p>
           </div>
         </UiCardContent>

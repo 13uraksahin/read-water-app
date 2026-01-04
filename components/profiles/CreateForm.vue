@@ -7,7 +7,7 @@ import {
   IPRating,
   CommunicationModule,
   type MeterProfile,
-  type DeviceProfile,
+  type ModuleProfile,
 } from '~/types'
 import { SearchableSelect } from '~/components/ui/searchable-select'
 
@@ -26,8 +26,8 @@ const toast = useToast()
 
 // State
 const isSubmitting = ref(false)
-const isLoadingDeviceProfiles = ref(false)
-const deviceProfiles = ref<DeviceProfile[]>([])
+const isLoadingModuleProfiles = ref(false)
+const moduleProfiles = ref<ModuleProfile[]>([])
 
 // Enum options
 const brandOptions = Object.values(Brand).map(b => ({ label: b, value: b }))
@@ -73,8 +73,8 @@ const formData = reactive({
   pressureLoss: props.profile?.pressureLoss,
   ipRating: props.profile?.ipRating || IPRating.IP67,
   communicationModule: props.profile?.communicationModule || CommunicationModule.NONE,
-  // Compatible device profiles (for linking)
-  compatibleDeviceProfileIds: props.profile?.compatibleDeviceProfiles?.map(dp => dp.id) || [] as string[],
+  // Compatible module profiles (for linking)
+  compatibleModuleProfileIds: props.profile?.compatibleModuleProfiles?.map(dp => dp.id) || [] as string[],
 })
 
 // Validation errors
@@ -98,33 +98,33 @@ watch([() => formData.q1, () => formData.q3], () => {
   }
 })
 
-// Fetch device profiles for compatibility selection
-const fetchDeviceProfiles = async () => {
-  isLoadingDeviceProfiles.value = true
+// Fetch module profiles for compatibility selection
+const fetchModuleProfiles = async () => {
+  isLoadingModuleProfiles.value = true
   try {
-    const response = await api.getList<DeviceProfile>('/api/v1/device-profiles', { limit: 100 })
-    deviceProfiles.value = response.data
+    const response = await api.getList<ModuleProfile>('/api/v1/module-profiles', { limit: 100 })
+    moduleProfiles.value = response.data
   } catch (error) {
-    console.error('Failed to fetch device profiles:', error)
+    console.error('Failed to fetch module profiles:', error)
   } finally {
-    isLoadingDeviceProfiles.value = false
+    isLoadingModuleProfiles.value = false
   }
 }
 
-// Toggle device profile compatibility
-const toggleDeviceProfile = (profileId: string) => {
-  const index = formData.compatibleDeviceProfileIds.indexOf(profileId)
+// Toggle module profile compatibility
+const toggleModuleProfile = (profileId: string) => {
+  const index = formData.compatibleModuleProfileIds.indexOf(profileId)
   if (index > -1) {
-    formData.compatibleDeviceProfileIds.splice(index, 1)
+    formData.compatibleModuleProfileIds.splice(index, 1)
   } else {
-    formData.compatibleDeviceProfileIds.push(profileId)
+    formData.compatibleModuleProfileIds.push(profileId)
   }
 }
 
-// Group device profiles by technology for display
-const deviceProfilesByTechnology = computed(() => {
-  const grouped: Record<string, DeviceProfile[]> = {}
-  deviceProfiles.value.forEach(dp => {
+// Group module profiles by technology for display
+const moduleProfilesByTechnology = computed(() => {
+  const grouped: Record<string, ModuleProfile[]> = {}
+  moduleProfiles.value.forEach(dp => {
     const tech = dp.communicationTechnology || 'OTHER'
     if (!grouped[tech]) grouped[tech] = []
     grouped[tech].push(dp)
@@ -193,8 +193,8 @@ const handleSubmit = async () => {
       pressureLoss: formData.pressureLoss,
       ipRating: formData.ipRating,
       communicationModule: formData.communicationModule,
-      // Send compatible device profile IDs
-      compatibleDeviceProfileIds: formData.compatibleDeviceProfileIds,
+      // Send compatible module profile IDs
+      compatibleModuleProfileIds: formData.compatibleModuleProfileIds,
     }
     
     if (isEditMode.value && props.profile) {
@@ -214,9 +214,9 @@ const handleSubmit = async () => {
   }
 }
 
-// Fetch device profiles on mount
+// Fetch module profiles on mount
 onMounted(() => {
-  fetchDeviceProfiles()
+  fetchModuleProfiles()
 })
 </script>
 
@@ -470,28 +470,28 @@ onMounted(() => {
       </div>
     </div>
     
-    <!-- Compatible Device Profiles -->
+    <!-- Compatible Module Profiles -->
     <div v-if="formData.communicationModule !== 'NONE'" class="space-y-4 pt-4 border-t border-border">
       <div>
-        <h3 class="font-medium text-lg">Compatible Device Profiles</h3>
+        <h3 class="font-medium text-lg">Compatible Module Profiles</h3>
         <p class="text-sm text-muted-foreground">
-          Select device profiles that are compatible with this meter. This determines which communication devices can be linked to meters using this profile.
+          Select module profiles that are compatible with this meter. This determines which communication modules can be linked to meters using this profile.
         </p>
       </div>
       
-      <div v-if="isLoadingDeviceProfiles" class="flex items-center justify-center py-8">
+      <div v-if="isLoadingModuleProfiles" class="flex items-center justify-center py-8">
         <UiSpinner />
       </div>
       
-      <div v-else-if="deviceProfiles.length === 0" class="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
-        <p>No device profiles available</p>
-        <p class="text-sm">Create device profiles first to set up compatibility</p>
+      <div v-else-if="moduleProfiles.length === 0" class="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
+        <p>No module profiles available</p>
+        <p class="text-sm">Create module profiles first to set up compatibility</p>
       </div>
       
       <div v-else class="space-y-4">
         <!-- Group by technology -->
         <div
-          v-for="(profiles, technology) in deviceProfilesByTechnology"
+          v-for="(profiles, technology) in moduleProfilesByTechnology"
           :key="technology"
           class="space-y-2"
         >
@@ -504,18 +504,18 @@ onMounted(() => {
               v-for="profile in profiles"
               :key="profile.id"
               class="p-3 rounded-lg border cursor-pointer transition-colors"
-              :class="formData.compatibleDeviceProfileIds.includes(profile.id) 
+              :class="formData.compatibleModuleProfileIds.includes(profile.id) 
                 ? 'border-primary bg-primary/5' 
                 : 'border-border hover:border-primary/50'"
-              @click="toggleDeviceProfile(profile.id)"
+              @click="toggleModuleProfile(profile.id)"
             >
               <div class="flex items-center gap-3">
                 <input
                   type="checkbox"
-                  :checked="formData.compatibleDeviceProfileIds.includes(profile.id)"
+                  :checked="formData.compatibleModuleProfileIds.includes(profile.id)"
                   class="rounded border-input"
                   @click.stop
-                  @change="toggleDeviceProfile(profile.id)"
+                  @change="toggleModuleProfile(profile.id)"
                 />
                 <div class="flex-1 min-w-0">
                   <p class="font-medium truncate">{{ profile.brand }} {{ profile.modelCode }}</p>
@@ -530,7 +530,7 @@ onMounted(() => {
         
         <!-- Selected count -->
         <p class="text-sm text-muted-foreground">
-          {{ formData.compatibleDeviceProfileIds.length }} device profile(s) selected
+          {{ formData.compatibleModuleProfileIds.length }} module profile(s) selected
         </p>
       </div>
     </div>

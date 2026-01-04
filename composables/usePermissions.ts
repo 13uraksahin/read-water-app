@@ -11,7 +11,7 @@ export const MODULES = {
   SUBSCRIPTIONS: 'subscription',
   CUSTOMERS: 'customer',
   METERS: 'meter',
-  DEVICES: 'device',
+  MODULES: 'module',
   PROFILES: 'profile',
   ALARMS: 'alarm',
   TENANTS: 'tenant',

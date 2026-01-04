@@ -109,9 +109,9 @@ export const useDashboardStore = defineStore('dashboard', {
     activeAlarms: (state) => state.stats?.activeAlarms ?? 0,
     metersInMaintenance: (state) => state.stats?.metersInMaintenance ?? 0,
     metersOffline: (state) => state.stats?.metersOffline ?? 0,
-    totalDevices: (state) => state.stats?.totalDevices ?? 0,
-    devicesInWarehouse: (state) => state.stats?.devicesInWarehouse ?? 0,
-    devicesDeployed: (state) => state.stats?.devicesDeployed ?? 0,
+    totalModules: (state) => state.stats?.totalModules ?? 0,
+    modulesInWarehouse: (state) => state.stats?.modulesInWarehouse ?? 0,
+    modulesDeployed: (state) => state.stats?.modulesDeployed ?? 0,
 
     // Map getters
     metersWithAlarms: (state) => state.mapData.filter(m => m.mapStatus === 'alarm'),

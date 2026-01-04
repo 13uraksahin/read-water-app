@@ -105,7 +105,7 @@ onMounted(() => {
           <div>
             <UiLabel>HTTP Callback URL</UiLabel>
             <UiInput v-model="formData.httpCallbackUrl" placeholder="https://api.readwater.io/webhook" />
-            <p class="text-xs text-muted-foreground mt-1">Endpoint for IoT device callbacks</p>
+            <p class="text-xs text-muted-foreground mt-1">Endpoint for IoT module callbacks</p>
           </div>
           
           <div>

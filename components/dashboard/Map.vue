@@ -148,7 +148,7 @@ const updateMarkers = () => {
     const subtextColor = isDark.value ? '#9ca3af' : '#6b7280'
     const borderColor = isDark.value ? '#374151' : '#e5e7eb'
     
-    // Create popup content with device info
+    // Create popup content with module info
     const popupContent = `
       <div style="min-width: 180px;">
         <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${meter.serialNumber}</div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Users, Plus, Search, Building2, User, FileText } from 'lucide-vue-next'
-import type { Customer, PaginatedResponse, CustomerType } from '~/types'
+import { Users, Plus, Search, Building2, User, FileText, MapPin, Gauge, Calendar } from 'lucide-vue-next'
+import type { Customer, PaginatedResponse, CustomerType, Subscription } from '~/types'
 
 definePageMeta({
   middleware: ['auth'],
@@ -78,6 +78,25 @@ const getCustomerId = (customer: Customer): string => {
     return customer.details?.tcIdNo || 'N/A'
   }
   return customer.details?.taxId || 'N/A'
+}
+
+// Format address from subscription
+const formatAddress = (address?: Subscription['address']): string => {
+  if (!address) return '-'
+  const parts = [
+    address.neighborhood,
+    address.street,
+    address.buildingNo && `No: ${address.buildingNo}`,
+    address.district,
+    address.city,
+  ].filter(Boolean)
+  return parts.join(', ') || '-'
+}
+
+// Get consumption group variant
+const getConsumptionGroupVariant = (group?: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
+  if (group === 'HIGH_CONSUMPTION') return 'destructive'
+  return 'secondary'
 }
 </script>
 
@@ -172,11 +191,68 @@ const getCustomerId = (customer: Customer): string => {
                   <p class="text-muted-foreground text-xs">{{ customer.details?.email || customer.details?.contactEmail || '-' }}</p>
                 </div>
               </UiTableCell>
-              <UiTableCell>
-                <div class="flex items-center gap-2">
+              <UiTableCell @click.stop>
+                <!-- Hover Card for Subscriptions -->
+                <UiHoverCard v-if="customer.subscriptions && customer.subscriptions.length > 0">
+                  <UiHoverCardTrigger as-child>
+                    <button class="flex items-center gap-2 hover:bg-muted/50 px-2 py-1 rounded-md transition-colors">
+                      <FileText class="h-4 w-4 text-muted-foreground" />
+                      <UiBadge variant="outline" class="cursor-pointer">
+                        {{ customer._count?.subscriptions || customer.subscriptions?.length || 0 }}
+                      </UiBadge>
+                    </button>
+                  </UiHoverCardTrigger>
+                  <UiHoverCardContent class="w-80" side="left">
+                    <div class="space-y-3">
+                      <div class="flex items-center gap-2">
+                        <FileText class="h-4 w-4 text-primary" />
+                        <h4 class="font-semibold">Subscriptions</h4>
+                      </div>
+                      <div class="space-y-2 max-h-64 overflow-y-auto">
+                        <div
+                          v-for="subscription in customer.subscriptions.slice(0, 5)"
+                          :key="subscription.id"
+                          class="p-2 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                          @click="navigateTo(`/subscriptions/${subscription.id}`)"
+                        >
+                          <div class="flex items-center justify-between mb-1">
+                            <span class="font-mono text-xs font-medium">{{ subscription.subscriptionNumber }}</span>
+                            <UiBadge 
+                              :variant="getConsumptionGroupVariant(subscription.consumptionGroup)" 
+                              class="text-xs"
+                            >
+                              {{ subscription.consumptionGroup?.replace(/_/g, ' ') || 'Normal' }}
+                            </UiBadge>
+                          </div>
+                          <div v-if="subscription.address" class="flex items-start gap-1 text-xs text-muted-foreground">
+                            <MapPin class="h-3 w-3 mt-0.5 flex-shrink-0" />
+                            <span class="line-clamp-2">{{ formatAddress(subscription.address) }}</span>
+                          </div>
+                          <div class="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            <Gauge class="h-3 w-3" />
+                            <span>{{ subscription.meters?.length || 0 }} meters</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-if="customer.subscriptions.length > 5" class="text-xs text-muted-foreground text-center pt-1 border-t border-border">
+                        +{{ customer.subscriptions.length - 5 }} more subscriptions
+                      </div>
+                      <UiButton 
+                        variant="outline" 
+                        size="sm" 
+                        class="w-full"
+                        @click.stop="navigateTo(`/customers/${customer.id}`)"
+                      >
+                        View All
+                      </UiButton>
+                    </div>
+                  </UiHoverCardContent>
+                </UiHoverCard>
+                <!-- Simple badge when no subscriptions or not loaded -->
+                <div v-else class="flex items-center gap-2">
                   <FileText class="h-4 w-4 text-muted-foreground" />
                   <UiBadge variant="outline">
-                    {{ customer._count?.subscriptions || customer.subscriptions?.length || 0 }}
+                    {{ customer._count?.subscriptions || 0 }}
                   </UiBadge>
                 </div>
               </UiTableCell>

@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { Info, Wifi, Zap, Star } from 'lucide-vue-next'
 import {
-  DeviceStatus,
+  ModuleStatus,
   CommunicationTechnology,
   COMMUNICATION_TECH_FIELDS,
-  type DeviceProfile,
-  type Device,
+  type ModuleProfile,
+  type Module,
   type Tenant,
   type TechFieldDefinition,
-  type DeviceCommunicationConfig,
+  type ModuleCommunicationConfig,
   type Scenario,
 } from '~/types'
 import { SearchableSelect } from '~/components/ui/searchable-select'
 
 const props = defineProps<{
-  device?: Device
+  module?: Module
   mode?: 'create' | 'edit'
 }>()
 
@@ -35,21 +35,21 @@ const isEditMode = computed(() => props.mode === 'edit')
 
 // Lookups
 const tenants = ref<Tenant[]>([])
-const deviceProfiles = ref<DeviceProfile[]>([])
+const moduleProfiles = ref<ModuleProfile[]>([])
 
 // Form data
 const formData = reactive({
-  tenantId: props.device?.tenantId || '',
-  deviceProfileId: props.device?.deviceProfileId || '',
-  serialNumber: props.device?.serialNumber || '',
-  status: props.device?.status || DeviceStatus.WAREHOUSE,
+  tenantId: props.module?.tenantId || '',
+  moduleProfileId: props.module?.moduleProfileId || '',
+  serialNumber: props.module?.serialNumber || '',
+  status: props.module?.status || ModuleStatus.WAREHOUSE,
   // Selected technology (required if profile has multiple technologies)
-  selectedTechnology: props.device?.selectedTechnology || '' as CommunicationTechnology | '',
+  selectedTechnology: props.module?.selectedTechnology || '' as CommunicationTechnology | '',
   // Active scenario IDs (multi-select)
-  activeScenarioIds: props.device?.activeScenarioIds || [] as string[],
+  activeScenarioIds: props.module?.activeScenarioIds || [] as string[],
   // Dynamic fields will be populated based on profile
-  dynamicFields: { ...(props.device?.dynamicFields || {}) } as Record<string, string>,
-  metadata: props.device?.metadata || {},
+  dynamicFields: { ...(props.module?.dynamicFields || {}) } as Record<string, string>,
+  metadata: props.module?.metadata || {},
 })
 
 // Validation errors
@@ -58,27 +58,27 @@ const errors = reactive<Record<string, string>>({})
 // Status options (limited on create)
 const statusOptions = computed(() => {
   if (isEditMode.value) {
-    return Object.values(DeviceStatus).map(s => ({ label: s.replace(/_/g, ' '), value: s }))
+    return Object.values(ModuleStatus).map(s => ({ label: s.replace(/_/g, ' '), value: s }))
   }
   // Only allow WAREHOUSE on create
   return [
-    { label: 'Warehouse', value: DeviceStatus.WAREHOUSE },
+    { label: 'Warehouse', value: ModuleStatus.WAREHOUSE },
   ]
 })
 
-// Selected device profile
+// Selected module profile
 const selectedProfile = computed(() => {
-  return deviceProfiles.value.find(p => p.id === formData.deviceProfileId)
+  return moduleProfiles.value.find(p => p.id === formData.moduleProfileId)
 })
 
 // Get communication configs from profile (new format or legacy)
-const profileCommunicationConfigs = computed((): DeviceCommunicationConfig[] => {
+const profileCommunicationConfigs = computed((): ModuleCommunicationConfig[] => {
   if (!selectedProfile.value) return []
   
   // Check for new format: communicationConfigs in specifications
   const specs = selectedProfile.value.specifications as Record<string, unknown> | undefined
   if (specs?.communicationConfigs && Array.isArray(specs.communicationConfigs)) {
-    return specs.communicationConfigs as DeviceCommunicationConfig[]
+    return specs.communicationConfigs as ModuleCommunicationConfig[]
   }
   
   // Fallback: Legacy single technology format
@@ -165,7 +165,7 @@ const selectedTechnologyFieldDefinitions = computed((): TechFieldDefinition[] =>
 })
 
 // Watch for profile changes and initialize technology/scenarios/fields
-watch(() => formData.deviceProfileId, () => {
+watch(() => formData.moduleProfileId, () => {
   if (!isEditMode.value) {
     // Reset selections when profile changes
     formData.selectedTechnology = ''
@@ -221,18 +221,18 @@ const fetchLookups = async () => {
   try {
     const [tenantsRes, profilesRes] = await Promise.all([
       api.getList<Tenant>('/api/v1/tenants', { limit: 100 }),
-      api.getList<DeviceProfile>('/api/v1/device-profiles', { limit: 100 }),
+      api.getList<ModuleProfile>('/api/v1/module-profiles', { limit: 100 }),
     ])
     
     tenants.value = tenantsRes.data
-    deviceProfiles.value = profilesRes.data
+    moduleProfiles.value = profilesRes.data
     
     // Set default tenant if only one (only in create mode)
     if (!isEditMode.value && tenants.value.length === 1 && tenants.value[0]) {
       formData.tenantId = tenants.value[0].id
     }
   } catch (error) {
-    toast.error('Failed to load form data')
+    toast.error('Failed to load module form data')
   } finally {
     isLoading.value = false
   }
@@ -246,7 +246,7 @@ const validate = (): boolean => {
   // Only validate create-only fields when not in edit mode
   if (!isEditMode.value) {
     if (!formData.tenantId) errors.tenantId = 'Tenant is required'
-    if (!formData.deviceProfileId) errors.deviceProfileId = 'Device profile is required'
+    if (!formData.moduleProfileId) errors.moduleProfileId = 'Module profile is required'
     if (!formData.serialNumber) errors.serialNumber = 'Serial number is required'
     
     // Validate technology selection if profile has multiple technologies
@@ -287,7 +287,7 @@ const handleSubmit = async () => {
       // Fields only allowed on create
       ...(isEditMode.value ? {} : {
         tenantId: formData.tenantId,
-        deviceProfileId: formData.deviceProfileId,
+        moduleProfileId: formData.moduleProfileId,
         serialNumber: formData.serialNumber,
       }),
       // Fields allowed on both create and update
@@ -298,17 +298,17 @@ const handleSubmit = async () => {
       metadata: formData.metadata,
     }
     
-    if (isEditMode.value && props.device) {
-      await api.patch(`/api/v1/devices/${props.device.id}`, payload)
-      toast.success('Device updated successfully')
+    if (isEditMode.value && props.module) {
+      await api.patch(`/api/v1/modules/${props.module.id}`, payload)
+      toast.success('Module updated successfully')
     } else {
-      await api.post('/api/v1/devices', payload)
-      toast.success('Device created successfully')
+      await api.post('/api/v1/modules', payload)
+      toast.success('Module created successfully')
     }
     emit('success')
   } catch (error: unknown) {
     const err = error as { message?: string }
-    toast.error(`Failed to ${isEditMode.value ? 'update' : 'create'} device`, err.message)
+    toast.error(`Failed to ${isEditMode.value ? 'update' : 'create'} module`, err.message)
   } finally {
     isSubmitting.value = false
   }
@@ -330,7 +330,7 @@ onMounted(() => {
     <template v-else>
       <!-- Basic Info -->
       <div class="space-y-4">
-        <h3 class="font-medium text-lg">Device Information</h3>
+        <h3 class="font-medium text-lg">Module Information</h3>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -351,23 +351,23 @@ onMounted(() => {
           </div>
           
           <div>
-            <UiLabel :error="!!errors.deviceProfileId">Device Profile *</UiLabel>
+            <UiLabel :error="!!errors.moduleProfileId">Module Profile *</UiLabel>
             <SearchableSelect
-              v-model="formData.deviceProfileId"
-              :options="deviceProfiles.map(p => ({ 
+              v-model="formData.moduleProfileId"
+              :options="moduleProfiles.map(p => ({ 
                 label: `${p.brand} ${p.modelCode}`, 
                 value: p.id,
                 description: p.communicationTechnology?.replace(/_/g, '-')
               }))"
-              placeholder="Select device profile"
-              search-placeholder="Search device profiles..."
-              empty-text="No device profiles found"
-              :error="!!errors.deviceProfileId"
+              placeholder="Select module profile"
+              search-placeholder="Search module profiles..."
+              empty-text="No module profiles found"
+              :error="!!errors.moduleProfileId"
               :disabled="isEditMode"
             />
-            <p v-if="errors.deviceProfileId" class="text-xs text-destructive mt-1">{{ errors.deviceProfileId }}</p>
+            <p v-if="errors.moduleProfileId" class="text-xs text-destructive mt-1">{{ errors.moduleProfileId }}</p>
             <p v-else-if="isEditMode" class="text-xs text-muted-foreground mt-1">
-              Device profile cannot be changed after creation
+              Module profile cannot be changed after creation
             </p>
           </div>
           
@@ -396,7 +396,7 @@ onMounted(() => {
               :disabled="!isEditMode"
             />
             <p v-if="!isEditMode" class="text-xs text-muted-foreground mt-1">
-              New devices start in Warehouse status
+              New modules start in Warehouse status
             </p>
           </div>
         </div>
@@ -426,7 +426,7 @@ onMounted(() => {
             {{ errors.selectedTechnology }}
           </p>
           <p v-else class="text-xs text-muted-foreground">
-            This device profile supports multiple technologies. Select one for this device.
+            This module profile supports multiple technologies. Select one for this module.
           </p>
         </div>
         
@@ -435,7 +435,7 @@ onMounted(() => {
           <div>
             <UiLabel>Active Scenarios</UiLabel>
             <p class="text-xs text-muted-foreground">
-              Select which messaging scenarios this device will use (can select multiple)
+              Select which messaging scenarios this module will use (can select multiple)
             </p>
           </div>
           
@@ -478,7 +478,7 @@ onMounted(() => {
         
         <div class="flex items-center gap-1 text-xs text-muted-foreground">
           <Info class="h-3 w-3" />
-          <span>Fields defined by the selected device profile</span>
+          <span>Fields defined by the selected module profile</span>
         </div>
         
         <div class="p-4 rounded-lg border border-border bg-muted/50">
@@ -571,7 +571,7 @@ onMounted(() => {
           Cancel
         </UiButton>
         <UiButton type="submit" :loading="isSubmitting">
-          {{ isEditMode ? 'Update Device' : 'Add to Inventory' }}
+          {{ isEditMode ? 'Update Module' : 'Add Module' }}
         </UiButton>
       </div>
     </template>

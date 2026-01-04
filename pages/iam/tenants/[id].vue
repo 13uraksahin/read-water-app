@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   FileText,
 } from 'lucide-vue-next'
-import type { Tenant, User, MeterProfile, DeviceProfile } from '~/types'
+import type { Tenant, User, MeterProfile, ModuleProfile } from '~/types'
 
 definePageMeta({
   middleware: ['auth'],
@@ -31,11 +31,11 @@ const tenantId = computed(() => route.params.id as string)
 const tenant = ref<Tenant | null>(null)
 const users = ref<User[]>([])
 const allowedProfiles = ref<MeterProfile[]>([])
-const allowedDeviceProfiles = ref<DeviceProfile[]>([])
+const allowedModuleProfiles = ref<ModuleProfile[]>([])
 const isLoading = ref(true)
 const isLoadingUsers = ref(true)
 const isLoadingProfiles = ref(true)
-const isLoadingDeviceProfiles = ref(true)
+const isLoadingModuleProfiles = ref(true)
 const showEditDialog = ref(false)
 
 // Stats
@@ -107,22 +107,22 @@ const fetchProfiles = async () => {
   }
 }
 
-// Fetch allowed device profiles for this tenant
-const fetchDeviceProfiles = async () => {
-  isLoadingDeviceProfiles.value = true
+// Fetch allowed module profiles for this tenant
+const fetchModuleProfiles = async () => {
+  isLoadingModuleProfiles.value = true
   try {
-    // First check if tenant object has allowedDeviceProfiles embedded
-    if (tenant.value?.allowedDeviceProfiles?.length) {
-      allowedDeviceProfiles.value = tenant.value.allowedDeviceProfiles
+    // First check if tenant object has allowedModuleProfiles embedded
+    if (tenant.value?.allowedModuleProfiles?.length) {
+      allowedModuleProfiles.value = tenant.value.allowedModuleProfiles
       return
     }
     
-    allowedDeviceProfiles.value = []
+    allowedModuleProfiles.value = []
   } catch (error) {
-    console.error('Failed to fetch device profiles:', error)
-    allowedDeviceProfiles.value = []
+    console.error('Failed to fetch module profiles:', error)
+    allowedModuleProfiles.value = []
   } finally {
-    isLoadingDeviceProfiles.value = false
+    isLoadingModuleProfiles.value = false
   }
 }
 
@@ -150,7 +150,7 @@ onMounted(async () => {
   await fetchTenant()
   fetchUsers()
   fetchProfiles()
-  fetchDeviceProfiles()
+  fetchModuleProfiles()
 })
 
 // Handle edit success
@@ -450,33 +450,33 @@ const handleEditSuccess = () => {
         </UiCardContent>
       </UiCard>
       
-      <!-- Allowed Device Profiles -->
+      <!-- Allowed Module Profiles -->
       <UiCard>
         <UiCardHeader>
           <div class="flex items-center justify-between">
             <div>
-              <UiCardTitle>Allowed Device Profiles</UiCardTitle>
-              <UiCardDescription>Device models this tenant can use</UiCardDescription>
+              <UiCardTitle>Allowed Module Profiles</UiCardTitle>
+              <UiCardDescription>Module models this tenant can use</UiCardDescription>
             </div>
           </div>
         </UiCardHeader>
         <UiCardContent>
-          <div v-if="isLoadingDeviceProfiles" class="flex gap-2">
+          <div v-if="isLoadingModuleProfiles" class="flex gap-2">
             <UiSkeleton v-for="i in 4" :key="i" class="h-8 w-32" />
           </div>
           
-          <div v-else-if="allowedDeviceProfiles.length === 0" class="text-center py-8 text-muted-foreground">
+          <div v-else-if="allowedModuleProfiles.length === 0" class="text-center py-8 text-muted-foreground">
             <FileText class="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>No device profiles assigned</p>
+            <p>No module profiles assigned</p>
           </div>
           
           <div v-else class="flex flex-wrap gap-2">
             <UiBadge
-              v-for="profile in allowedDeviceProfiles"
+              v-for="profile in allowedModuleProfiles"
               :key="profile.id"
               variant="secondary"
               class="cursor-pointer hover:bg-secondary/80"
-              @click="navigateTo(`/profiles/device/${profile.id}`)"
+              @click="navigateTo(`/profiles/module/${profile.id}`)"
             >
               <FileText class="h-3 w-3 mr-1" />
               {{ profile.brand }} {{ profile.modelCode }} - {{ profile.communicationTechnology }}

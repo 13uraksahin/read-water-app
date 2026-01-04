@@ -166,24 +166,24 @@ const handleEditSuccess = () => {
           </UiCardContent>
         </UiCard>
         
-        <!-- Compatible Device Profiles -->
+        <!-- Compatible Module Profiles -->
         <UiCard>
           <UiCardHeader>
             <UiCardTitle class="flex items-center gap-2">
               <Radio class="h-4 w-4" />
-              Compatible Devices
+              Compatible Modules
             </UiCardTitle>
             <UiCardDescription>
-              Device profiles that can be linked to meters using this profile
+              Module profiles that can be linked to meters using this profile
             </UiCardDescription>
           </UiCardHeader>
           <UiCardContent>
-            <div v-if="profile.compatibleDeviceProfiles?.length" class="space-y-3">
+            <div v-if="profile.compatibleModuleProfiles?.length" class="space-y-3">
               <div
-                v-for="dp in profile.compatibleDeviceProfiles"
+                v-for="dp in profile.compatibleModuleProfiles"
                 :key="dp.id"
                 class="p-3 rounded-lg border border-border hover:border-primary/50 cursor-pointer transition-colors"
-                @click="navigateTo(`/profiles/device/${dp.id}`)"
+                @click="navigateTo(`/profiles/module/${dp.id}`)"
               >
                 <div class="flex items-center justify-between">
                   <div>
@@ -201,8 +201,8 @@ const handleEditSuccess = () => {
             
             <div v-else class="text-center py-6 text-muted-foreground">
               <Radio class="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p class="text-sm">No compatible device profiles</p>
-              <p class="text-xs">Edit this profile to add compatible devices</p>
+              <p class="text-sm">No compatible module profiles</p>
+              <p class="text-xs">Edit this profile to add compatible modules</p>
             </div>
           </UiCardContent>
         </UiCard>

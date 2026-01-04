@@ -4,7 +4,7 @@ import type { Reading } from '~/types'
 import { formatDateTime } from '~/lib/utils'
 
 const props = defineProps<{
-  deviceId: string
+  moduleId: string
 }>()
 
 const api = useApi()
@@ -17,7 +17,7 @@ const limit = ref(20)
 const total = ref(0)
 const isRefreshing = ref(false)
 
-// Fetch device messages (readings from this device)
+// Fetch module messages (readings from this module)
 const fetchMessages = async (showRefresh = false) => {
   if (showRefresh) {
     isRefreshing.value = true
@@ -27,14 +27,14 @@ const fetchMessages = async (showRefresh = false) => {
   
   try {
     const response = await api.getList<Reading>('/api/v1/readings', {
-      sourceDeviceId: props.deviceId,
+      sourceModuleId: props.moduleId,
       page: page.value,
       limit: limit.value,
     })
     readings.value = response.data
     total.value = response.meta?.total || 0
   } catch (error) {
-    console.error('Failed to fetch device messages:', error)
+    console.error('Failed to fetch module messages:', error)
   } finally {
     isLoading.value = false
     isRefreshing.value = false
@@ -68,7 +68,7 @@ const goToPage = (p: number) => {
 }
 
 // Initial fetch
-watch(() => props.deviceId, fetchMessages, { immediate: true })
+watch(() => props.moduleId, fetchMessages, { immediate: true })
 </script>
 
 <template>
@@ -78,10 +78,10 @@ watch(() => props.deviceId, fetchMessages, { immediate: true })
         <div>
           <UiCardTitle class="flex items-center gap-2">
             <Radio class="h-5 w-5" />
-            Device Messages
+            Module Messages
           </UiCardTitle>
           <UiCardDescription>
-            Communication history and readings from this device
+            Communication history and readings from this module
             <span v-if="total > 0" class="ml-2">({{ total.toLocaleString() }} total)</span>
           </UiCardDescription>
         </div>
@@ -143,7 +143,7 @@ watch(() => props.deviceId, fetchMessages, { immediate: true })
             <UiTableCell :colspan="8" class="text-center py-12 text-muted-foreground">
               <Radio class="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p class="font-medium">No messages recorded</p>
-              <p class="text-sm">This device hasn't sent any communications yet</p>
+              <p class="text-sm">This module hasn't sent any communications yet</p>
             </UiTableCell>
           </UiTableRow>
         </template>

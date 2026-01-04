@@ -2,7 +2,7 @@
 // TypeScript Type Definitions - Read Water Frontend
 // =============================================================================
 // Updated for Subscription Model Architecture
-// Tenant → Customer → Subscription → Meter → Device
+// Tenant → Customer → Subscription → Meter → Module
 // =============================================================================
 
 // =============================================================================
@@ -28,7 +28,7 @@ export enum MeterStatus {
   USED = 'USED',
 }
 
-export enum DeviceStatus {
+export enum ModuleStatus {
   ACTIVE = 'ACTIVE',
   PASSIVE = 'PASSIVE',
   WAREHOUSE = 'WAREHOUSE',
@@ -37,6 +37,10 @@ export enum DeviceStatus {
   DEPLOYED = 'DEPLOYED',
   USED = 'USED',
 }
+
+// Backward compatibility alias
+export const DeviceStatus = ModuleStatus
+export type DeviceStatus = ModuleStatus
 
 export enum ValveStatus {
   OPEN = 'OPEN',
@@ -53,11 +57,6 @@ export enum CustomerType {
 export enum ConsumptionType {
   NORMAL = 'NORMAL',
   HIGH = 'HIGH',
-}
-
-export enum SubscriptionType {
-  INDIVIDUAL = 'INDIVIDUAL',
-  ORGANIZATIONAL = 'ORGANIZATIONAL',
 }
 
 export enum SubscriptionGroup {
@@ -103,8 +102,8 @@ export enum Brand {
   IMA = 'IMA',
 }
 
-// Device Brands
-export enum DeviceBrand {
+// Module Brands
+export enum ModuleBrand {
   UNA = 'UNA',
   IMA = 'IMA',
   ITRON = 'ITRON',
@@ -115,6 +114,10 @@ export enum DeviceBrand {
   KLEPSAN = 'KLEPSAN',
   INODYA = 'INODYA',
 }
+
+// Backward compatibility alias
+export const DeviceBrand = ModuleBrand
+export type DeviceBrand = ModuleBrand
 
 export enum MeterType {
   SINGLE_JET = 'SINGLE_JET',
@@ -176,19 +179,22 @@ export interface User {
 }
 
 // Module names for permissions
-export enum Module {
+export enum MODULES {
   DASHBOARD = 'dashboard',
   READINGS = 'readings',
   SUBSCRIPTIONS = 'subscriptions',
   CUSTOMERS = 'customers',
   METERS = 'meters',
-  DEVICES = 'devices',
+  MODULES = 'modules',
   PROFILES = 'profiles',
   ALARMS = 'alarms',
   TENANTS = 'tenants',
   USERS = 'users',
   SETTINGS = 'settings',
 }
+
+// Backward compatibility - keep DEVICES pointing to MODULES
+export const Module = MODULES
 
 // Permission actions
 export enum PermissionAction {
@@ -200,7 +206,7 @@ export enum PermissionAction {
 
 // Module permission structure
 export interface ModulePermissions {
-  module: Module
+  module: MODULES
   create: boolean
   read: boolean
   update: boolean
@@ -237,7 +243,7 @@ export interface Tenant {
   updatedAt: string
   children?: Tenant[]
   allowedProfiles?: MeterProfile[]
-  allowedDeviceProfiles?: DeviceProfile[]
+  allowedModuleProfiles?: ModuleProfile[]
 }
 
 // =============================================================================
@@ -288,7 +294,6 @@ export interface Subscription {
   tenantId: string
   subscriptionNumber: string
   customerId: string
-  subscriptionType: SubscriptionType
   subscriptionGroup: SubscriptionGroup
   address: Address
   addressCode?: string
@@ -307,10 +312,10 @@ export interface Subscription {
 }
 
 // =============================================================================
-// Device Profile (Electronic Communication Unit Specs)
+// Module Profile (Electronic Communication Unit Specs)
 // =============================================================================
 
-export interface DeviceFieldDefinition {
+export interface ModuleFieldDefinition {
   name: string
   label?: string
   type: 'hex' | 'string' | 'number'
@@ -319,6 +324,9 @@ export interface DeviceFieldDefinition {
   required: boolean
   description?: string
 }
+
+// Backward compatibility alias
+export type DeviceFieldDefinition = ModuleFieldDefinition
 
 // Scenario definition for a messaging mode within a technology
 export interface Scenario {
@@ -332,22 +340,25 @@ export interface Scenario {
   description?: string            // Optional description
 }
 
-export interface DeviceCommunicationConfig {
+export interface ModuleCommunicationConfig {
   technology: CommunicationTechnology
-  fieldDefinitions: DeviceFieldDefinition[]
+  fieldDefinitions: ModuleFieldDefinition[]
   scenarios?: Scenario[]          // Multiple scenarios per technology
   // DEPRECATED: Legacy fields for backward compatibility
   decoderFunction?: string
   testPayload?: string
 }
 
-export interface DeviceProfile {
+// Backward compatibility alias
+export type DeviceCommunicationConfig = ModuleCommunicationConfig
+
+export interface ModuleProfile {
   id: string
-  brand: DeviceBrand
+  brand: ModuleBrand
   modelCode: string
   communicationTechnology: CommunicationTechnology
   integrationType: IntegrationType
-  fieldDefinitions: DeviceFieldDefinition[]
+  fieldDefinitions: ModuleFieldDefinition[]
   decoderFunction?: string
   testPayload?: string
   expectedOutput?: Record<string, unknown>
@@ -355,27 +366,30 @@ export interface DeviceProfile {
   lastTestSucceeded?: boolean
   batteryLifeMonths?: number
   specifications?: Record<string, unknown>
-  communicationConfigs?: DeviceCommunicationConfig[]
+  communicationConfigs?: ModuleCommunicationConfig[]
   createdAt: string
   updatedAt: string
   compatibleMeterProfiles?: MeterProfile[]
 }
 
+// Backward compatibility alias
+export type DeviceProfile = ModuleProfile
+
 // =============================================================================
-// Device (Physical Communication Unit - Inventory Item)
+// Module (Physical Communication Unit)
 // =============================================================================
 
-export interface Device {
+export interface Module {
   id: string
   tenantId: string
-  deviceProfileId: string
+  moduleProfileId: string
   serialNumber: string
-  status: DeviceStatus
+  status: ModuleStatus
   // Selected communication technology (when profile has multiple)
   selectedTechnology?: CommunicationTechnology
-  // Active scenario IDs for this device
+  // Active scenario IDs for this module
   activeScenarioIds?: string[]
-  // Dynamic fields populated based on DeviceProfile's field definitions
+  // Dynamic fields populated based on ModuleProfile's field definitions
   dynamicFields: Record<string, string>
   lastSignalStrength?: number
   lastBatteryLevel?: number
@@ -384,9 +398,12 @@ export interface Device {
   createdAt: string
   updatedAt: string
   tenant?: Tenant
-  deviceProfile?: DeviceProfile
+  moduleProfile?: ModuleProfile
   meter?: Meter
 }
+
+// Backward compatibility alias
+export type Device = Module
 
 // =============================================================================
 // Meter Profile (Mechanical Meter Specs)
@@ -416,7 +433,7 @@ export interface MeterProfile {
   specifications?: Record<string, unknown>
   createdAt: string
   updatedAt: string
-  compatibleDeviceProfiles?: DeviceProfile[]
+  compatibleModuleProfiles?: ModuleProfile[]
   allowedTenants?: Tenant[]
   _count?: {
     meters: number
@@ -447,7 +464,7 @@ export interface Meter {
   tenant?: Tenant
   subscription?: Subscription // Now includes customer and address
   meterProfile?: MeterProfile
-  activeDevice?: Device
+  activeModule?: Module
   readings?: Reading[]
   alarms?: Alarm[]
 }
@@ -465,7 +482,7 @@ export interface Reading {
   temperature?: number
   rawPayload?: Record<string, unknown>
   source?: string
-  sourceDeviceId?: string
+  sourceModuleId?: string
   communicationTechnology?: CommunicationTechnology
   processedAt?: string
   decoderUsed?: string
@@ -499,10 +516,10 @@ export interface DecoderFunction {
   expectedOutput?: Record<string, unknown>
   lastTestedAt?: string
   lastTestSucceeded?: boolean
-  deviceProfileId: string
-  deviceProfile?: {
+  moduleProfileId: string
+  moduleProfile?: {
     id: string
-    brand: DeviceBrand
+    brand: ModuleBrand
     modelCode: string
   }
   createdAt: string
@@ -562,7 +579,6 @@ export interface CreateSubscriptionForm {
   tenantId: string
   subscriptionNumber: string
   customerId: string
-  subscriptionType: SubscriptionType
   subscriptionGroup?: SubscriptionGroup
   address: Address
   latitude?: number
@@ -581,27 +597,36 @@ export interface CreateMeterForm {
   installationDate: string
 }
 
-export interface CreateDeviceForm {
+export interface CreateModuleForm {
   tenantId: string
-  deviceProfileId: string
+  moduleProfileId: string
   serialNumber: string
-  status?: DeviceStatus
+  status?: ModuleStatus
   // Selected communication technology (required if profile has multiple)
   selectedTechnology?: CommunicationTechnology
-  // Active scenario IDs for this device
+  // Active scenario IDs for this module
   activeScenarioIds?: string[]
-  // Dynamic fields populated based on DeviceProfile's field definitions
+  // Dynamic fields populated based on ModuleProfile's field definitions
   dynamicFields: Record<string, string>
   metadata?: Record<string, unknown>
 }
 
-export interface LinkDeviceForm {
-  deviceId: string
+// Backward compatibility alias
+export type CreateDeviceForm = CreateModuleForm
+
+export interface LinkModuleForm {
+  moduleId: string
 }
 
-export interface UnlinkDeviceForm {
-  deviceStatus?: 'WAREHOUSE' | 'MAINTENANCE'
+// Backward compatibility alias
+export type LinkDeviceForm = LinkModuleForm
+
+export interface UnlinkModuleForm {
+  moduleStatus?: 'WAREHOUSE' | 'MAINTENANCE'
 }
+
+// Backward compatibility alias
+export type UnlinkDeviceForm = UnlinkModuleForm
 
 export interface CreateCustomerForm {
   tenantId: string
@@ -623,9 +648,9 @@ export interface DashboardStats {
   activeAlarms: number
   metersInMaintenance: number
   metersOffline: number
-  totalDevices?: number
-  devicesInWarehouse?: number
-  devicesDeployed?: number
+  totalModules?: number
+  modulesInWarehouse?: number
+  modulesDeployed?: number
 }
 
 export interface MeterMapData {
@@ -661,7 +686,7 @@ export const COMMUNICATION_TECH_FIELDS: Record<CommunicationTechnology, TechFiel
     { name: 'PAC', label: 'PAC', type: 'hex', length: 16, regex: '^[a-fA-F0-9]{16}$', required: true },
   ],
   [CommunicationTechnology.LORAWAN]: [
-    { name: 'DevEUI', label: 'Device EUI', type: 'hex', length: 16, regex: '^[a-fA-F0-9]{16}$', required: true },
+    { name: 'DevEUI', label: 'Module EUI', type: 'hex', length: 16, regex: '^[a-fA-F0-9]{16}$', required: true },
     { name: 'JoinEUI', label: 'Join EUI', type: 'hex', length: 16, regex: '^[a-fA-F0-9]{16}$', required: true },
     { name: 'AppKey', label: 'Application Key', type: 'hex', length: 32, regex: '^[a-fA-F0-9]{32}$', required: true },
   ],
@@ -672,7 +697,7 @@ export const COMMUNICATION_TECH_FIELDS: Record<CommunicationTechnology, TechFiel
   ],
   [CommunicationTechnology.WM_BUS]: [
     { name: 'ManufacturerId', label: 'Manufacturer ID', type: 'string', length: 3, regex: '^[A-Z]{3}$', required: true },
-    { name: 'DeviceId', label: 'Device ID', type: 'hex', length: 8, regex: '^[a-fA-F0-9]{8}$', required: true },
+    { name: 'ModuleId', label: 'Module ID', type: 'hex', length: 8, regex: '^[a-fA-F0-9]{8}$', required: true },
     { name: 'EncryptionKey', label: 'Encryption Key', type: 'hex', length: 32, regex: '^[a-fA-F0-9]{32}$', required: false },
   ],
   [CommunicationTechnology.MIOTY]: [
@@ -690,6 +715,6 @@ export const COMMUNICATION_TECH_FIELDS: Record<CommunicationTechnology, TechFiel
   ],
   [CommunicationTechnology.OMS]: [
     { name: 'ManufacturerId', label: 'Manufacturer ID', type: 'string', length: 3, regex: '^[A-Z]{3}$', required: true },
-    { name: 'DeviceId', label: 'Device ID', type: 'hex', length: 8, regex: '^[a-fA-F0-9]{8}$', required: true },
+    { name: 'ModuleId', label: 'Module ID', type: 'hex', length: 8, regex: '^[a-fA-F0-9]{8}$', required: true },
   ],
 }

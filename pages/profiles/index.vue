@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { FileText, Radio, Plus, Search, Code, Settings } from 'lucide-vue-next'
-import type { MeterProfile, DeviceProfile, PaginatedResponse } from '~/types'
+import type { MeterProfile, ModuleProfile, PaginatedResponse } from '~/types'
 
 definePageMeta({
   middleware: ['auth'],
@@ -11,15 +11,15 @@ const api = useApi()
 const toast = useToast()
 
 // Active tab
-const activeTab = ref<'meter' | 'device'>('meter')
+const activeTab = ref<'meter' | 'module'>('meter')
 
 // State
 const meterProfiles = ref<MeterProfile[]>([])
-const deviceProfiles = ref<DeviceProfile[]>([])
+const moduleProfiles = ref<ModuleProfile[]>([])
 const isLoadingMeter = ref(true)
-const isLoadingDevice = ref(true)
+const isLoadingModule = ref(true)
 const showCreateMeterDialog = ref(false)
-const showCreateDeviceDialog = ref(false)
+const showCreateModuleDialog = ref(false)
 const searchQuery = ref('')
 
 // Fetch meter profiles
@@ -38,26 +38,26 @@ const fetchMeterProfiles = async () => {
   }
 }
 
-// Fetch device profiles
-const fetchDeviceProfiles = async () => {
-  isLoadingDevice.value = true
+// Fetch module profiles
+const fetchModuleProfiles = async () => {
+  isLoadingModule.value = true
   try {
-    const response = await api.getList<DeviceProfile>('/api/v1/device-profiles', {
+    const response = await api.getList<ModuleProfile>('/api/v1/module-profiles', {
       search: searchQuery.value || undefined,
       limit: 100,
     })
-    deviceProfiles.value = response.data
+    moduleProfiles.value = response.data
   } catch (error) {
-    toast.error('Failed to fetch device profiles')
+    toast.error('Failed to fetch module profiles')
   } finally {
-    isLoadingDevice.value = false
+    isLoadingModule.value = false
   }
 }
 
 // Fetch all data
 const fetchAllData = () => {
   fetchMeterProfiles()
-  fetchDeviceProfiles()
+  fetchModuleProfiles()
 }
 
 // Fetch data on mount - profiles are global configurations, not tenant-specific
@@ -71,7 +71,7 @@ watch(searchQuery, () => {
   if (activeTab.value === 'meter') {
     fetchMeterProfiles()
   } else {
-    fetchDeviceProfiles()
+    fetchModuleProfiles()
   }
 })
 
@@ -87,10 +87,10 @@ const handleMeterCreateSuccess = () => {
   toast.success('Meter profile created successfully')
 }
 
-const handleDeviceCreateSuccess = () => {
-  showCreateDeviceDialog.value = false
-  fetchDeviceProfiles()
-  toast.success('Device profile created successfully')
+const handleModuleCreateSuccess = () => {
+  showCreateModuleDialog.value = false
+  fetchModuleProfiles()
+  toast.success('Module profile created successfully')
 }
 </script>
 
@@ -103,7 +103,7 @@ const handleDeviceCreateSuccess = () => {
           <FileText class="h-6 w-6 text-primary" />
           {{ t('profiles.title', 'Profiles') }}
         </h1>
-        <p class="text-muted-foreground">{{ t('profiles.description', 'Manage meter and device profiles') }}</p>
+        <p class="text-muted-foreground">{{ t('profiles.description', 'Manage meter and module profiles') }}</p>
       </div>
       
       <div class="flex gap-2">
@@ -111,9 +111,9 @@ const handleDeviceCreateSuccess = () => {
           <Plus class="h-4 w-4" />
           {{ t('profiles.addMeterProfile', 'Add Meter Profile') }}
         </UiButton>
-        <UiButton v-else @click="showCreateDeviceDialog = true">
+        <UiButton v-else @click="showCreateModuleDialog = true">
           <Plus class="h-4 w-4" />
-          {{ t('profiles.addDeviceProfile', 'Add Device Profile') }}
+          {{ t('profiles.addModuleProfile', 'Add Module Profile') }}
         </UiButton>
       </div>
     </div>
@@ -135,14 +135,14 @@ const handleDeviceCreateSuccess = () => {
         
         <button
           class="px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2"
-          :class="activeTab === 'device' 
+          :class="activeTab === 'module' 
             ? 'border-primary text-primary' 
             : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'"
-          @click="activeTab = 'device'"
+          @click="activeTab = 'module'"
         >
           <Radio class="h-4 w-4" />
-          {{ t('profiles.deviceProfiles', 'Device Profiles') }}
-          <UiBadge variant="secondary" class="ml-1">{{ deviceProfiles.length }}</UiBadge>
+          {{ t('profiles.moduleProfiles', 'Module Profiles') }}
+          <UiBadge variant="secondary" class="ml-1">{{ moduleProfiles.length }}</UiBadge>
         </button>
       </nav>
     </div>
@@ -221,24 +221,24 @@ const handleDeviceCreateSuccess = () => {
               </div>
             </div>
             
-            <!-- Compatible Device Profiles -->
-            <div v-if="profile.compatibleDeviceProfiles?.length" class="mt-4 pt-4 border-t border-border">
-              <p class="text-xs text-muted-foreground mb-2">Compatible Devices:</p>
+            <!-- Compatible Module Profiles -->
+            <div v-if="profile.compatibleModuleProfiles?.length" class="mt-4 pt-4 border-t border-border">
+              <p class="text-xs text-muted-foreground mb-2">Compatible Modules:</p>
               <div class="flex flex-wrap gap-1">
                 <UiBadge
-                  v-for="dp in profile.compatibleDeviceProfiles.slice(0, 3)"
-                  :key="dp.id"
+                  v-for="mp in profile.compatibleModuleProfiles.slice(0, 3)"
+                  :key="mp.id"
                   variant="outline"
                   class="text-xs"
                 >
-                  {{ dp.brand }} {{ dp.modelCode }}
+                  {{ mp.brand }} {{ mp.modelCode }}
                 </UiBadge>
                 <UiBadge
-                  v-if="profile.compatibleDeviceProfiles.length > 3"
+                  v-if="profile.compatibleModuleProfiles.length > 3"
                   variant="outline"
                   class="text-xs"
                 >
-                  +{{ profile.compatibleDeviceProfiles.length - 3 }} more
+                  +{{ profile.compatibleModuleProfiles.length - 3 }} more
                 </UiBadge>
               </div>
             </div>
@@ -247,15 +247,15 @@ const handleDeviceCreateSuccess = () => {
       </div>
     </template>
     
-    <!-- Device Profiles Tab -->
+    <!-- Module Profiles Tab -->
     <template v-else>
       <div class="mb-4">
         <p class="text-sm text-muted-foreground">
-          {{ t('profiles.deviceProfilesDescription', 'Communication device configurations and decoders') }}
+          {{ t('profiles.moduleProfilesDescription', 'Communication module configurations and decoders') }}
         </p>
       </div>
       
-      <div v-if="isLoadingDevice" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div v-if="isLoadingModule" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <UiCard v-for="i in 6" :key="i" class="p-6">
           <UiSkeleton class="h-6 w-3/4 mb-4" />
           <UiSkeleton class="h-4 w-1/2 mb-2" />
@@ -263,18 +263,18 @@ const handleDeviceCreateSuccess = () => {
         </UiCard>
       </div>
       
-      <div v-else-if="deviceProfiles.length === 0" class="text-center py-12">
+      <div v-else-if="moduleProfiles.length === 0" class="text-center py-12">
         <Radio class="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
         <p class="font-medium">{{ t('profiles.noProfiles', 'No profiles found') }}</p>
-        <p class="text-sm text-muted-foreground">Add a new device profile to get started</p>
+        <p class="text-sm text-muted-foreground">Add a new module profile to get started</p>
       </div>
       
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <UiCard
-          v-for="profile in deviceProfiles"
+          v-for="profile in moduleProfiles"
           :key="profile.id"
           hover
-          @click="navigateTo(`/profiles/device/${profile.id}`)"
+          @click="navigateTo(`/profiles/module/${profile.id}`)"
         >
           <UiCardHeader>
             <div class="flex items-start justify-between">
@@ -360,17 +360,17 @@ const handleDeviceCreateSuccess = () => {
       </UiDialogContent>
     </UiDialog>
     
-    <!-- Create Device Profile Dialog -->
-    <UiDialog v-model:open="showCreateDeviceDialog">
+    <!-- Create Module Profile Dialog -->
+    <UiDialog v-model:open="showCreateModuleDialog">
       <UiDialogContent class="max-w-3xl">
         <UiDialogHeader>
-          <UiDialogTitle>Add Device Profile</UiDialogTitle>
-          <UiDialogDescription>Create a new device profile with communication settings and decoder</UiDialogDescription>
+          <UiDialogTitle>Add Module Profile</UiDialogTitle>
+          <UiDialogDescription>Create a new module profile with communication settings and decoder</UiDialogDescription>
         </UiDialogHeader>
         <div class="overflow-y-auto flex-1 -mx-6 px-6">
-          <ProfilesDeviceCreateForm
-            @success="handleDeviceCreateSuccess"
-            @cancel="showCreateDeviceDialog = false"
+          <ProfilesModuleCreateForm
+            @success="handleModuleCreateSuccess"
+            @cancel="showCreateModuleDialog = false"
           />
         </div>
       </UiDialogContent>
