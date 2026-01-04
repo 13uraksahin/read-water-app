@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Users, Plus, Search, Building2, User, FileText, MapPin, Gauge, Calendar } from 'lucide-vue-next'
+import { Users, Plus, Search, Building2, User, FileText, MapPin, Gauge, Calendar, Download, Upload } from 'lucide-vue-next'
 import type { Customer, PaginatedResponse, CustomerType, Subscription } from '~/types'
+import type { ExportScope } from '~/composables/useBulkOperations'
 
 definePageMeta({
   middleware: ['auth'],
@@ -9,11 +10,15 @@ definePageMeta({
 const api = useApi()
 const toast = useToast()
 const appStore = useAppStore()
+const { exportCustomers, customersColumns } = useBulkOperations()
 
 // State
 const customers = ref<Customer[]>([])
 const isLoading = ref(true)
 const showCreateDialog = ref(false)
+const showExportDialog = ref(false)
+const showImportDialog = ref(false)
+const isExporting = ref(false)
 const searchQuery = ref('')
 
 // Pagination
@@ -98,6 +103,29 @@ const getConsumptionGroupVariant = (group?: string): 'default' | 'secondary' | '
   if (group === 'HIGH_CONSUMPTION') return 'destructive'
   return 'secondary'
 }
+
+// Handle export
+const handleExport = async (scope: ExportScope, selectedColumns: string[]) => {
+  isExporting.value = true
+  try {
+    await exportCustomers({
+      scope,
+      filters: {
+        search: searchQuery.value || undefined,
+      },
+      pageData: scope === 'page' ? customers.value : undefined,
+      selectedColumns,
+    })
+    showExportDialog.value = false
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// Handle import success
+const handleImportSuccess = () => {
+  fetchCustomers()
+}
 </script>
 
 <template>
@@ -112,10 +140,24 @@ const getConsumptionGroupVariant = (group?: string): 'default' | 'secondary' | '
         <p class="text-muted-foreground">Manage customer accounts</p>
       </div>
       
-      <UiButton @click="showCreateDialog = true">
-        <Plus class="h-4 w-4" />
-        Add Customer
-      </UiButton>
+      <div class="flex items-center gap-2">
+        <!-- Export Button -->
+        <UiButton variant="outline" @click="showExportDialog = true">
+          <Download class="h-4 w-4" />
+          Export
+        </UiButton>
+        
+        <!-- Bulk Import Button -->
+        <UiButton variant="outline" @click="showImportDialog = true">
+          <Upload class="h-4 w-4" />
+          Bulk Import
+        </UiButton>
+        
+        <UiButton @click="showCreateDialog = true">
+          <Plus class="h-4 w-4" />
+          Add Customer
+        </UiButton>
+      </div>
     </div>
     
     <!-- Search -->
@@ -298,5 +340,23 @@ const getConsumptionGroupVariant = (group?: string): 'default' | 'secondary' | '
         </div>
       </UiDialogContent>
     </UiDialog>
+    
+    <!-- Export Dialog -->
+    <BulkExportDialog
+      v-model:open="showExportDialog"
+      title="Export Customers"
+      description="Export customer data to CSV file"
+      :current-page-count="customers.length"
+      :total-count="pagination.total"
+      :is-exporting="isExporting"
+      :columns="customersColumns"
+      @export="handleExport"
+    />
+    
+    <!-- Import Dialog -->
+    <BulkCustomersImportDialog
+      v-model:open="showImportDialog"
+      @success="handleImportSuccess"
+    />
   </div>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { FileText, Plus, Search, MapPin } from 'lucide-vue-next'
+import { FileText, Plus, Search, MapPin, Download, Upload } from 'lucide-vue-next'
 import type { Subscription, PaginatedResponse } from '~/types'
+import type { ExportScope } from '~/composables/useBulkOperations'
 
 definePageMeta({
   middleware: ['auth'],
@@ -9,11 +10,15 @@ definePageMeta({
 const api = useApi()
 const toast = useToast()
 const appStore = useAppStore()
+const { exportSubscriptions, subscriptionsColumns } = useBulkOperations()
 
 // State
 const subscriptions = ref<Subscription[]>([])
 const isLoading = ref(true)
 const showCreateDialog = ref(false)
+const showExportDialog = ref(false)
+const showImportDialog = ref(false)
+const isExporting = ref(false)
 const searchQuery = ref('')
 
 // Pagination
@@ -91,6 +96,29 @@ const getCustomerId = (subscription: Subscription): string => {
   }
   return customer.details?.taxId || 'N/A'
 }
+
+// Handle export
+const handleExport = async (scope: ExportScope, selectedColumns: string[]) => {
+  isExporting.value = true
+  try {
+    await exportSubscriptions({
+      scope,
+      filters: {
+        search: searchQuery.value || undefined,
+      },
+      pageData: scope === 'page' ? subscriptions.value : undefined,
+      selectedColumns,
+    })
+    showExportDialog.value = false
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// Handle import success
+const handleImportSuccess = () => {
+  fetchSubscriptions()
+}
 </script>
 
 <template>
@@ -105,10 +133,24 @@ const getCustomerId = (subscription: Subscription): string => {
         <p class="text-muted-foreground">Manage service subscriptions linking customers to meters</p>
       </div>
       
-      <UiButton @click="showCreateDialog = true">
-        <Plus class="h-4 w-4" />
-        Add Subscription
-      </UiButton>
+      <div class="flex items-center gap-2">
+        <!-- Export Button -->
+        <UiButton variant="outline" @click="showExportDialog = true">
+          <Download class="h-4 w-4" />
+          Export
+        </UiButton>
+        
+        <!-- Bulk Import Button -->
+        <UiButton variant="outline" @click="showImportDialog = true">
+          <Upload class="h-4 w-4" />
+          Bulk Import
+        </UiButton>
+        
+        <UiButton @click="showCreateDialog = true">
+          <Plus class="h-4 w-4" />
+          Add Subscription
+        </UiButton>
+      </div>
     </div>
     
     <!-- Search -->
@@ -231,6 +273,24 @@ const getCustomerId = (subscription: Subscription): string => {
         </div>
       </UiDialogContent>
     </UiDialog>
+    
+    <!-- Export Dialog -->
+    <BulkExportDialog
+      v-model:open="showExportDialog"
+      title="Export Subscriptions"
+      description="Export subscription data to CSV file"
+      :current-page-count="subscriptions.length"
+      :total-count="pagination.total"
+      :is-exporting="isExporting"
+      :columns="subscriptionsColumns"
+      @export="handleExport"
+    />
+    
+    <!-- Import Dialog -->
+    <BulkSubscriptionsImportDialog
+      v-model:open="showImportDialog"
+      @success="handleImportSuccess"
+    />
   </div>
 </template>
 

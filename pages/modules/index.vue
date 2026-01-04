@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Radio, Plus, Search, Edit, Trash2, Link2, Link2Off, Warehouse, Activity } from 'lucide-vue-next'
+import { Radio, Plus, Search, Edit, Trash2, Link2, Link2Off, Warehouse, Activity, Download, Upload } from 'lucide-vue-next'
 import type { Module, ModuleStatus, ModuleProfile, PaginatedResponse } from '~/types'
+import type { ExportScope } from '~/composables/useBulkOperations'
 import { formatDate, formatDateTime } from '~/lib/utils'
 
 definePageMeta({
@@ -12,12 +13,16 @@ const api = useApi()
 const toast = useToast()
 const moduleStore = useModuleStore()
 const appStore = useAppStore()
+const { exportModules, modulesColumns } = useBulkOperations()
 
 // State
 const modules = ref<Module[]>([])
 const moduleProfiles = ref<ModuleProfile[]>([])
 const isLoading = ref(true)
 const showCreateDialog = ref(false)
+const showExportDialog = ref(false)
+const showImportDialog = ref(false)
+const isExporting = ref(false)
 const showDeleteConfirm = ref(false)
 const moduleToDelete = ref<Module | null>(null)
 const searchQuery = ref('')
@@ -178,6 +183,32 @@ const handleCreateSuccess = () => {
   fetchModules()
   toast.success('Module created successfully')
 }
+
+// Handle export
+const handleExport = async (scope: ExportScope, selectedColumns: string[]) => {
+  isExporting.value = true
+  try {
+    await exportModules({
+      scope,
+      filters: {
+        search: searchQuery.value || undefined,
+        status: statusFilter.value || undefined,
+        brand: brandFilter.value || undefined,
+        technology: techFilter.value || undefined,
+      },
+      pageData: scope === 'page' ? modules.value : undefined,
+      selectedColumns,
+    })
+    showExportDialog.value = false
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// Handle import success
+const handleImportSuccess = () => {
+  fetchModules()
+}
 </script>
 
 <template>
@@ -192,10 +223,24 @@ const handleCreateSuccess = () => {
         <p class="text-muted-foreground">{{ t('modules.description', 'Manage communication modules') }}</p>
       </div>
       
-      <UiButton @click="showCreateDialog = true">
-        <Plus class="h-4 w-4" />
-        {{ t('modules.addModule', 'Add Module') }}
-      </UiButton>
+      <div class="flex items-center gap-2">
+        <!-- Export Button -->
+        <UiButton variant="outline" @click="showExportDialog = true">
+          <Download class="h-4 w-4" />
+          Export
+        </UiButton>
+        
+        <!-- Bulk Import Button -->
+        <UiButton variant="outline" @click="showImportDialog = true">
+          <Upload class="h-4 w-4" />
+          Bulk Import
+        </UiButton>
+        
+        <UiButton @click="showCreateDialog = true">
+          <Plus class="h-4 w-4" />
+          {{ t('modules.addModule', 'Add Module') }}
+        </UiButton>
+      </div>
     </div>
     
     <!-- Stats Overview -->
@@ -470,5 +515,23 @@ const handleCreateSuccess = () => {
         </div>
       </UiDialogContent>
     </UiDialog>
+    
+    <!-- Export Dialog -->
+    <BulkExportDialog
+      v-model:open="showExportDialog"
+      title="Export Modules"
+      description="Export module data to CSV file"
+      :current-page-count="modules.length"
+      :total-count="pagination.total"
+      :is-exporting="isExporting"
+      :columns="modulesColumns"
+      @export="handleExport"
+    />
+    
+    <!-- Import Dialog -->
+    <BulkModulesImportDialog
+      v-model:open="showImportDialog"
+      @success="handleImportSuccess"
+    />
   </div>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Gauge, Plus, Search, Filter, Download } from 'lucide-vue-next'
+import { Gauge, Plus, Search, Filter, Download, Upload } from 'lucide-vue-next'
 import type { Meter, MeterStatus, PaginatedResponse } from '~/types'
+import type { ExportScope } from '~/composables/useBulkOperations'
 import { formatDate } from '~/lib/utils'
 
 definePageMeta({
@@ -11,11 +12,15 @@ const api = useApi()
 const toast = useToast()
 const appStore = useAppStore()
 const { canCreate, canUpdate, canDelete, MODULES } = usePermissions()
+const { exportMeters, metersColumns } = useBulkOperations()
 
 // State
 const meters = ref<Meter[]>([])
 const isLoading = ref(true)
 const showCreateDialog = ref(false)
+const showExportDialog = ref(false)
+const showImportDialog = ref(false)
+const isExporting = ref(false)
 const searchQuery = ref('')
 const statusFilter = ref<MeterStatus | ''>('')
 
@@ -97,6 +102,30 @@ const getStatusVariant = (status: MeterStatus) => {
 const goToMeter = (id: string) => {
   navigateTo(`/meters/${id}`)
 }
+
+// Handle export
+const handleExport = async (scope: ExportScope, selectedColumns: string[]) => {
+  isExporting.value = true
+  try {
+    await exportMeters({
+      scope,
+      filters: {
+        search: searchQuery.value || undefined,
+        status: statusFilter.value || undefined,
+      },
+      pageData: scope === 'page' ? meters.value : undefined,
+      selectedColumns,
+    })
+    showExportDialog.value = false
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// Handle import success
+const handleImportSuccess = () => {
+  fetchMeters()
+}
 </script>
 
 <template>
@@ -111,13 +140,29 @@ const goToMeter = (id: string) => {
         <p class="text-muted-foreground">Manage water meters across all tenants</p>
       </div>
       
-      <!-- Only show Add Meter button if user has meter.create permission -->
-      <UiPermissionGate :module="MODULES.METERS" action="create">
-        <UiButton @click="showCreateDialog = true">
-          <Plus class="h-4 w-4" />
-          Add Meter
+      <div class="flex items-center gap-2">
+        <!-- Export Button -->
+        <UiButton variant="outline" @click="showExportDialog = true">
+          <Download class="h-4 w-4" />
+          Export
         </UiButton>
-      </UiPermissionGate>
+        
+        <!-- Bulk Import Button -->
+        <UiPermissionGate :module="MODULES.METERS" action="create">
+          <UiButton variant="outline" @click="showImportDialog = true">
+            <Upload class="h-4 w-4" />
+            Bulk Import
+          </UiButton>
+        </UiPermissionGate>
+        
+        <!-- Only show Add Meter button if user has meter.create permission -->
+        <UiPermissionGate :module="MODULES.METERS" action="create">
+          <UiButton @click="showCreateDialog = true">
+            <Plus class="h-4 w-4" />
+            Add Meter
+          </UiButton>
+        </UiPermissionGate>
+      </div>
     </div>
     
     <!-- Filters -->
@@ -138,12 +183,6 @@ const goToMeter = (id: string) => {
           placeholder="Filter by status"
           class="w-full sm:w-48"
         />
-        
-        <!-- Export button only visible if user has reading.export permission -->
-        <UiButton v-permission="'reading.export'" variant="outline">
-          <Download class="h-4 w-4" />
-          Export
-        </UiButton>
       </div>
     </UiCard>
     
@@ -262,6 +301,24 @@ const goToMeter = (id: string) => {
         </div>
       </UiDialogContent>
     </UiDialog>
+    
+    <!-- Export Dialog -->
+    <BulkExportDialog
+      v-model:open="showExportDialog"
+      title="Export Meters"
+      description="Export meter data to CSV file"
+      :current-page-count="meters.length"
+      :total-count="pagination.total"
+      :is-exporting="isExporting"
+      :columns="metersColumns"
+      @export="handleExport"
+    />
+    
+    <!-- Import Dialog -->
+    <BulkMetersImportDialog
+      v-model:open="showImportDialog"
+      @success="handleImportSuccess"
+    />
   </div>
 </template>
 
