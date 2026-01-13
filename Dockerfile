@@ -31,13 +31,13 @@ COPY --from=deps /app/package*.json ./
 # Copy source code
 COPY . .
 
-# Build arguments for environment variables (passed during build)
-ARG NUXT_PUBLIC_API_BASE
-ARG NUXT_PUBLIC_SOCKET_URL
+# Build arguments for environment variables (baked into the build)
+ARG NUXT_PUBLIC_API_BASE=http://localhost:4000
+ARG NUXT_PUBLIC_SOCKET_URL=http://localhost:4000
 
 # Set environment variables for build
-ENV NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-http://localhost:4000}
-ENV NUXT_PUBLIC_SOCKET_URL=${NUXT_PUBLIC_SOCKET_URL:-http://localhost:4000}
+ENV NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE}
+ENV NUXT_PUBLIC_SOCKET_URL=${NUXT_PUBLIC_SOCKET_URL}
 ENV NODE_ENV=production
 
 # Build the application
@@ -52,7 +52,7 @@ WORKDIR /app
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
 
-# Create non-root user
+# Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nuxtjs
 
@@ -72,7 +72,7 @@ EXPOSE 3000
 USER nuxtjs
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/api/_health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))" || exit 1
 
 # Use dumb-init to handle signals properly
@@ -80,4 +80,3 @@ ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
 CMD ["node", ".output/server/index.mjs"]
-
